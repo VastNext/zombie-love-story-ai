@@ -74,6 +74,12 @@ export const envConfigs: Record<string, string> = {
   storage_public_domain: procEnv.STORAGE_PUBLIC_DOMAIN ?? '',
   inline_image_max_kb: procEnv.INLINE_IMAGE_MAX_KB ?? '2048',
 
+  // Auth - Google / Social
+  google_auth_enabled: procEnv.GOOGLE_AUTH_ENABLED ?? 'false',
+  google_client_id: procEnv.GOOGLE_CLIENT_ID ?? '',
+  google_client_secret: procEnv.GOOGLE_CLIENT_SECRET ?? '',
+  google_one_tap_enabled: procEnv.GOOGLE_ONE_TAP_ENABLED ?? 'false',
+
   // AI
   // OpenAI / Anthropic are admin-panel-only (like Gemini/Fal). No env fallback:
   // OPENAI_API_KEY / ANTHROPIC_API_KEY are common ambient vars, and falling back
