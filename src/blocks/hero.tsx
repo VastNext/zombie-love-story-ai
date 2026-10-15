@@ -11,6 +11,7 @@ import {
   Film,
   Heart,
   HelpCircle,
+  Loader2,
   Mail,
   Share2,
   ShieldCheck,
@@ -22,10 +23,16 @@ import {
   Video,
   Zap,
 } from 'lucide-react';
+import { toast } from 'sonner';
 
-import { Link } from '@/core/i18n/navigation';
+import { useSession } from '@/core/auth/client';
+import { Link, useRouter } from '@/core/i18n/navigation';
+import { apiPost } from '@/lib/api-client';
 
 export function Hero() {
+  const { data: session } = useSession();
+  const router = useRouter();
+
   const [photo1, setPhoto1] = useState<string | null>(null);
   const [photo2, setPhoto2] = useState<string | null>(null);
   const [photo1Name, setPhoto1Name] = useState<string>('');
@@ -41,13 +48,13 @@ export function Hero() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<{
+    productId: string;
     name: string;
     price: string;
     videos: string;
     discount?: string;
   } | null>(null);
-  const [emailInput, setEmailInput] = useState('');
-  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [isRedirectingToStripe, setIsRedirectingToStripe] = useState(false);
 
   const handleFileUpload = (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -76,14 +83,51 @@ export function Hero() {
   };
 
   const openCheckout = (plan: {
+    productId: string;
     name: string;
     price: string;
     videos: string;
     discount?: string;
   }) => {
     setSelectedPlan(plan);
-    setPaymentSuccess(false);
     setIsModalOpen(true);
+  };
+
+  // Real Stripe Checkout Trigger
+  const handleStripeCheckout = async () => {
+    if (!selectedPlan) return;
+
+    // If not signed in, guide user to sign in first with return redirect
+    if (!session?.user) {
+      toast.info('Please sign in or create an account to secure your order.');
+      router.push(`/sign-in?redirect=/#pricing`);
+      return;
+    }
+
+    try {
+      setIsRedirectingToStripe(true);
+      const res = await apiPost<{ url?: string; orderNo?: string }>(
+        '/api/payment/checkout',
+        {
+          product_id: selectedPlan.productId,
+          redirect: '/settings/payments',
+        }
+      );
+
+      if (res?.url) {
+        window.location.href = res.url;
+      } else {
+        toast.success('Order created successfully!');
+        router.push('/settings/payments');
+      }
+    } catch (err: any) {
+      toast.error(
+        err?.message ||
+          'Payment initiation failed. Please check Stripe configuration in admin panel.'
+      );
+    } finally {
+      setIsRedirectingToStripe(false);
+    }
   };
 
   const longTailKeywords = [
@@ -198,7 +242,7 @@ export function Hero() {
 
       {/* Generator Interactive Box */}
       <section id="generator" className="w-full max-w-4xl px-4 py-6">
-        <div className="border-border bg-card/90 relative overflow-hidden rounded-2xl border p-6 shadow-2xl backdrop-blur-xl sm:p-10">
+        <div className="bg-card/90 border-border relative overflow-hidden rounded-2xl border p-6 shadow-2xl backdrop-blur-xl sm:p-10">
           <div className="border-border flex flex-col items-start justify-between gap-4 border-b pb-6 sm:flex-row sm:items-center">
             <div>
               <h2 className="text-foreground flex items-center gap-2 text-lg font-semibold sm:text-xl">
@@ -248,7 +292,7 @@ export function Hero() {
                   You / Protagonist
                 </span>
               </div>
-              <label className="group border-border bg-background relative flex h-60 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl border transition-all hover:border-slate-500">
+              <label className="border-border bg-background group relative flex h-60 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl border transition-all hover:border-slate-500">
                 {photo1 ? (
                   <div className="relative h-full w-full">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -302,7 +346,7 @@ export function Hero() {
                   Infected → Restored in Memory
                 </span>
               </div>
-              <label className="group border-border bg-background relative flex h-60 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl border transition-all hover:border-slate-500">
+              <label className="border-border bg-background group relative flex h-60 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl border transition-all hover:border-slate-500">
                 {photo2 ? (
                   <div className="relative h-full w-full">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -346,7 +390,7 @@ export function Hero() {
             </div>
           </div>
 
-          <div className="bg-background border-border mt-8 flex flex-col items-center justify-between gap-4 rounded-xl border p-4 sm:flex-row">
+          <div className="border-border bg-background mt-8 flex flex-col items-center justify-between gap-4 rounded-xl border p-4 sm:flex-row">
             <div className="flex items-center gap-2">
               <Sliders className="text-muted-foreground h-3.5 w-3.5" />
               <span className="text-foreground text-xs font-medium">
@@ -383,10 +427,13 @@ export function Hero() {
             <button
               onClick={() => {
                 if (!photo1 || !photo2) {
-                  alert('Please upload both Photo 1 and Photo 2 to proceed.');
+                  toast.error(
+                    'Please upload both Photo 1 and Photo 2 to proceed.'
+                  );
                   return;
                 }
                 openCheckout({
+                  productId: 'zombie_single',
                   name:
                     storyPreset === 'dog'
                       ? 'Zombie Pet Pass (15s Video)'
@@ -657,6 +704,7 @@ export function Hero() {
             <button
               onClick={() =>
                 openCheckout({
+                  productId: 'zombie_single',
                   name: 'Single Video Pass',
                   price: '$6.99',
                   videos: '1 HD Video',
@@ -714,6 +762,7 @@ export function Hero() {
             <button
               onClick={() =>
                 openCheckout({
+                  productId: 'zombie_bundle',
                   name: 'Storyteller 3-Video Bundle',
                   price: '$14.99',
                   videos: '3 HD Videos ($4.99/ea)',
@@ -768,6 +817,7 @@ export function Hero() {
             <button
               onClick={() =>
                 openCheckout({
+                  productId: 'zombie_agency',
                   name: 'Creator Agency Pass',
                   price: '$29.99',
                   videos: '8 HD Videos',
@@ -781,7 +831,79 @@ export function Hero() {
         </div>
       </section>
 
-      {/* Checkout Modal */}
+      {/* FAQ Section */}
+      <section
+        id="faq"
+        className="border-border w-full max-w-4xl border-t px-6 py-16"
+      >
+        <div className="mb-12 text-center">
+          <span className="text-muted-foreground font-mono text-xs tracking-wider uppercase">
+            Answers & Help
+          </span>
+          <h2 className="text-foreground mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
+            Frequently Asked Questions
+          </h2>
+        </div>
+
+        <div className="space-y-4">
+          <div className="bg-card border-border rounded-xl border p-5">
+            <h3 className="text-foreground flex items-center gap-2 text-sm font-semibold">
+              <HelpCircle className="h-4 w-4 text-rose-500" />
+              What is the Zombie Love Story AI trend?
+            </h3>
+            <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
+              It is a viral cinematic video format on TikTok and Reels. It uses
+              two reference photos: one represents a human survivor, and the
+              other represents an infected lover or pet. The video begins with
+              an impending zombie attack, but instead of fleeing, the survivor
+              embraces the zombie, triggering a hard match-cut transition into a
+              sunlit memory of them happily together.
+            </p>
+          </div>
+
+          <div className="bg-card border-border rounded-xl border p-5">
+            <h3 className="text-foreground flex items-center gap-2 text-sm font-semibold">
+              <HelpCircle className="h-4 w-4 text-rose-500" />
+              Do I need to upload photos of someone dressed as a zombie?
+            </h3>
+            <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
+              No. You only need normal, healthy photos with clear facial
+              features. The AI model automatically transforms Photo 2 into the
+              infected state for the first 10 seconds of the film, and restores
+              their healthy appearance in the memory sequence.
+            </p>
+          </div>
+
+          <div className="bg-card border-border rounded-xl border p-5">
+            <h3 className="text-foreground flex items-center gap-2 text-sm font-semibold">
+              <HelpCircle className="h-4 w-4 text-rose-500" />
+              Can I use this for dogs and cats (Zombie Dog Trend)?
+            </h3>
+            <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
+              Yes! The pet version is one of the highest-viewed variants of this
+              trend. Simply select the &quot;Pet / Dog Trend&quot; preset at the
+              top of the generator, upload your portrait as Photo 1 and your dog
+              or cat as Photo 2.
+            </p>
+          </div>
+
+          <div className="bg-card border-border rounded-xl border p-5">
+            <h3 className="text-foreground flex items-center gap-2 text-sm font-semibold">
+              <HelpCircle className="h-4 w-4 text-rose-500" />
+              How does the Early Access purchase work?
+            </h3>
+            <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
+              Our automated GPU generation queue is rolling out in cohorts.
+              Purchasing an Early Access pass guarantees your position at the
+              top of the queue with lifetime locked-in pricing ($6.99 vs public
+              launch price of $12.99). You will receive generation credits and
+              private order management via your account dashboard.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Stripe Checkout Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-md">
           <div className="bg-card border-border relative w-full max-w-md rounded-2xl border p-6 shadow-2xl sm:p-8">
@@ -792,99 +914,88 @@ export function Hero() {
               ×
             </button>
 
-            {paymentSuccess ? (
-              <div className="py-6 text-center">
-                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-emerald-500/20 bg-emerald-500/10 text-emerald-400">
-                  <Check className="h-6 w-6" />
+            <div>
+              <div className="mb-3 flex items-center gap-2">
+                <span className="rounded border border-rose-500/20 bg-rose-500/10 p-2 text-rose-400">
+                  <CreditCard className="h-4 w-4" />
+                </span>
+                <div>
+                  <h3 className="text-foreground text-sm font-semibold">
+                    {selectedPlan ? selectedPlan.name : 'Early Access Pass'}
+                  </h3>
+                  <p className="text-muted-foreground text-[11px]">
+                    {selectedPlan
+                      ? `${selectedPlan.price} · ${selectedPlan.videos}`
+                      : 'Secure your video generation pass'}
+                  </p>
                 </div>
-                <h3 className="text-foreground text-base font-semibold">
-                  Order Confirmed!
-                </h3>
-                <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
-                  We&apos;ve reserved your priority queue slot for{' '}
-                  <strong className="text-rose-400">{emailInput}</strong>. You
-                  will receive an email confirmation with your private task
-                  access key.
-                </p>
-                <button
-                  onClick={() => setIsModalOpen(false)}
-                  className="bg-surface-2 hover:bg-surface-3 border-border text-foreground mt-6 w-full cursor-pointer rounded-lg border py-2 text-xs font-medium"
-                >
-                  Close
-                </button>
               </div>
-            ) : (
-              <div>
-                <div className="mb-3 flex items-center gap-2">
-                  <span className="rounded border border-rose-500/20 bg-rose-500/10 p-2 text-rose-400">
-                    <CreditCard className="h-4 w-4" />
-                  </span>
-                  <div>
-                    <h3 className="text-foreground text-sm font-semibold">
-                      {selectedPlan
-                        ? selectedPlan.name
-                        : 'Join Early Access Queue'}
-                    </h3>
-                    <p className="text-muted-foreground text-[11px]">
-                      {selectedPlan
-                        ? `${selectedPlan.price} · ${selectedPlan.videos}`
-                        : 'Be first when video generation opens'}
-                    </p>
-                  </div>
-                </div>
 
-                <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-300">
-                  <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                  <span className="text-[11px] leading-relaxed">
-                    <strong>Beta Notice:</strong> Video rendering pipeline is
-                    currently under high GPU demand. Early pass holders get
-                    priority rendering immediately as slots open.
-                  </span>
-                </div>
+              <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-300">
+                <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span className="text-[11px] leading-relaxed">
+                  <strong>Stripe Direct Checkout:</strong> You will be securely
+                  redirected to Stripe to complete payment. Order credits will
+                  be credited instantly upon payment confirmation.
+                </span>
+              </div>
 
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    if (!emailInput) return;
-                    setPaymentSuccess(true);
-                  }}
-                  className="mt-5 space-y-4"
-                >
-                  <div>
-                    <label className="text-muted-foreground mb-1 block text-[11px] font-medium">
-                      Delivery & Notification Email
-                    </label>
-                    <div className="relative">
-                      <Mail className="text-muted-foreground absolute top-3 left-3 h-3.5 w-3.5" />
-                      <input
-                        type="email"
-                        required
-                        placeholder="you@example.com"
-                        value={emailInput}
-                        onChange={(e) => setEmailInput(e.target.value)}
-                        className="bg-background border-border text-foreground placeholder-muted-foreground w-full rounded-lg border py-2 pr-3 pl-8 font-mono text-xs focus:border-rose-500 focus:outline-none"
-                      />
-                    </div>
+              {session?.user ? (
+                <div className="mt-5 space-y-4">
+                  <div className="bg-background border-border rounded-lg border p-3 text-xs">
+                    <span className="text-muted-foreground block text-[11px]">
+                      Purchasing as:
+                    </span>
+                    <strong className="text-foreground">
+                      {session.user.email}
+                    </strong>
                   </div>
 
-                  <div className="pt-2">
-                    <button
-                      type="submit"
-                      className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-rose-600 to-amber-600 py-2.5 text-xs font-semibold text-white shadow-md shadow-rose-950 transition-all hover:from-rose-500 hover:to-amber-500"
+                  <button
+                    onClick={handleStripeCheckout}
+                    disabled={isRedirectingToStripe}
+                    className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-rose-600 to-amber-600 py-2.5 text-xs font-semibold text-white shadow-md shadow-rose-950 transition-all hover:from-rose-500 hover:to-amber-500 disabled:opacity-50"
+                  >
+                    {isRedirectingToStripe ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <span>Redirecting to Stripe...</span>
+                      </>
+                    ) : (
+                      <>
+                        <LockIcon className="h-3.5 w-3.5" />
+                        <span>Pay {selectedPlan?.price} with Stripe</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-5 space-y-4">
+                  <p className="text-muted-foreground text-xs leading-relaxed">
+                    Please sign in or register to link your purchase and video
+                    delivery to your account.
+                  </p>
+                  <div className="flex gap-2">
+                    <Link
+                      href="/sign-in?redirect=/#pricing"
+                      className="flex-1 rounded-lg bg-rose-600 py-2 text-center text-xs font-medium text-white transition-colors hover:bg-rose-500"
                     >
-                      <LockIcon className="h-3 w-3" />
-                      <span>
-                        Confirm & Continue to Payment (
-                        {selectedPlan ? selectedPlan.price : '$6.99'})
-                      </span>
-                    </button>
-                    <p className="text-muted-foreground mt-2 text-center font-mono text-[10px]">
-                      Secured by Stripe & 256-bit SSL encryption
-                    </p>
+                      Sign In to Buy
+                    </Link>
+                    <Link
+                      href="/sign-up?redirect=/#pricing"
+                      className="flex-1 rounded-lg border border-slate-700 bg-slate-800 py-2 text-center text-xs font-medium text-slate-200 transition-colors hover:bg-slate-700"
+                    >
+                      Register Account
+                    </Link>
                   </div>
-                </form>
-              </div>
-            )}
+                </div>
+              )}
+
+              <p className="text-muted-foreground mt-3 text-center font-mono text-[10px]">
+                Secured by Stripe & 256-bit SSL encryption
+              </p>
+            </div>
           </div>
         </div>
       )}

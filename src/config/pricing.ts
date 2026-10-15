@@ -156,6 +156,42 @@ export const pricingCatalog: Record<string, PricingProduct> = {
     creditsValidDays: 365,
     requiresSubscription: true,
   },
+  // --- Zombie Love Story AI Pass Products ---
+  zombie_single: {
+    productId: 'zombie_single',
+    productName: 'Casual Single Video Pass',
+    planName: '1 Video Pass',
+    description: '1x 25-Second 720P HD Zombie Match-Cut Video Pass',
+    type: PaymentType.ONE_TIME,
+    priceInCents: 699,
+    currency: 'usd',
+    credits: 1000,
+    creditsValidDays: 365,
+  },
+  zombie_bundle: {
+    productId: 'zombie_bundle',
+    productName: 'Storyteller 3-Video Bundle',
+    planName: '3-Video Bundle',
+    description:
+      '3x 25-Second 720P HD Zombie Match-Cut Videos with Priority Queue',
+    type: PaymentType.ONE_TIME,
+    priceInCents: 1499,
+    currency: 'usd',
+    credits: 3500,
+    creditsValidDays: 365,
+  },
+  zombie_agency: {
+    productId: 'zombie_agency',
+    productName: 'Creator Agency Pass',
+    planName: '8-Video Agency Pass',
+    description:
+      '8x 25-Second 720P HD Videos with VIP Priority & Commercial Rights',
+    type: PaymentType.ONE_TIME,
+    priceInCents: 2999,
+    currency: 'usd',
+    credits: 10000,
+    creditsValidDays: 365,
+  },
 };
 
 /** The top-up packs offered in the credits page dialog, cheapest first. */

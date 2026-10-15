@@ -1,52 +1,69 @@
-import { LifeBuoy } from 'lucide-react';
+import { Skull } from 'lucide-react';
 
-import { m } from '@/paraglide/messages.js';
-import {
-  SiteFooter,
-  type FooterColumn,
-  type FooterSocial,
-} from '@/components/site-footer';
+import { Link } from '@/core/i18n/navigation';
 
 export function Footer() {
-  const columns: FooterColumn[] = [
-    {
-      title: m['landing.footer.features'](),
-      links: [
-        { label: m['landing.nav.create'](), href: '/chat' },
-        { label: m['landing.footer.gallery'](), href: '/library' },
-      ],
-    },
-    {
-      title: m['landing.footer.products'](),
-      links: [
-        // Sibling products, not this one — a footer that links to the site
-        // you are already on is just noise.
-        { label: 'ShipAny', href: 'https://shipany.ai' },
-        { label: 'ImgAny', href: 'https://imgany.ai' },
-      ],
-    },
-    {
-      title: m['landing.footer.legal'](),
-      links: [
-        { label: m['landing.footer.privacy'](), href: '/privacy-policy' },
-        { label: m['landing.footer.terms'](), href: '/terms-of-service' },
-      ],
-    },
-  ];
-
-  const socials: FooterSocial[] = [
-    {
-      icon: LifeBuoy,
-      href: '/settings/tickets',
-      label: m['settings.tickets.title'](),
-    },
-  ];
-
   return (
-    <SiteFooter
-      tagline={m['landing.footer.tagline']()}
-      columns={columns}
-      socials={socials}
-    />
+    <footer className="border-border border-t bg-[#010103] px-6 py-12">
+      <div className="text-muted-foreground mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 text-xs md:flex-row">
+        <div className="flex items-center gap-2">
+          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br from-rose-600 via-rose-500 to-amber-500">
+            <Skull className="h-3.5 w-3.5 text-white" />
+          </div>
+          <span className="text-foreground font-semibold">
+            ZombieLoveStory.ai
+          </span>
+          <span>· All rights reserved © 2026</span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-6 font-mono text-[11px]">
+          <a
+            href="/#generator"
+            className="hover:text-foreground transition-colors"
+          >
+            Generator
+          </a>
+          <a
+            href="/#storyboard"
+            className="hover:text-foreground transition-colors"
+          >
+            Match-Cut Anatomy
+          </a>
+          <a
+            href="/#prompts"
+            className="hover:text-foreground transition-colors"
+          >
+            Prompt Catalog
+          </a>
+          <a
+            href="/#longtail"
+            className="hover:text-foreground transition-colors"
+          >
+            Trend Variations
+          </a>
+          <a
+            href="/#pricing"
+            className="hover:text-foreground transition-colors"
+          >
+            Pricing
+          </a>
+          <a href="/#faq" className="hover:text-foreground transition-colors">
+            FAQ
+          </a>
+          <Link
+            href="/privacy-policy"
+            className="hover:text-foreground transition-colors"
+          >
+            Privacy
+          </Link>
+          <Link
+            href="/terms-of-service"
+            className="hover:text-foreground transition-colors"
+          >
+            Terms
+          </Link>
+        </div>
+      </div>
+    </footer>
   );
 }
