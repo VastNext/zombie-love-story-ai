@@ -1,33 +1,70 @@
 @import "tailwindcss";
 
 :root {
-  --background: #07090e;
-  --foreground: #f1f5f9;
+  --canvas: #010103;
+  --surface-1: #0a0c10;
+  --surface-2: #10131a;
+  --surface-3: #161b24;
+  --hairline: #1e2430;
+  --hairline-strong: #2a3344;
+  --text-main: #f1f5f9;
+  --text-muted: #94a3b8;
+  --text-subtle: #64748b;
+  --brand-rose: #e11d48;
+  --brand-amber: #d97706;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: var(--canvas);
+  --color-foreground: var(--text-main);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 body {
-  background: #07090e;
-  color: #f1f5f9;
+  background-color: var(--canvas);
+  color: var(--text-main);
   overflow-x: hidden;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
-/* Custom cinematic glow & vignette effects */
-.radial-glow {
-  background: radial-gradient(circle at 50% 20%, rgba(225, 29, 72, 0.15) 0%, rgba(15, 23, 42, 0) 70%);
+/* Linear-inspired ambient lighting */
+.ambient-glow-top {
+  background: radial-gradient(circle 800px at 50% -20%, rgba(225, 29, 72, 0.12) 0%, rgba(1, 1, 3, 0) 80%);
 }
 
-.amber-glow {
-  background: radial-gradient(circle at 50% 80%, rgba(245, 158, 11, 0.12) 0%, rgba(15, 23, 42, 0) 70%);
+.ambient-glow-bottom {
+  background: radial-gradient(circle 900px at 50% 100%, rgba(217, 119, 6, 0.08) 0%, rgba(1, 1, 3, 0) 80%);
 }
 
-.film-grain {
-  background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 0);
-  background-size: 24px 24px;
+/* Linear micro-grid & hair lines */
+.hairline-border {
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.hairline-border-strong {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.subtle-grid {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #010103;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e2430;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2a3344;
 }
