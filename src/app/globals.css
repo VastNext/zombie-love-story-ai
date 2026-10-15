@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+:root {
+  --background: #07090e;
+  --foreground: #f1f5f9;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: #07090e;
+  color: #f1f5f9;
+  overflow-x: hidden;
+}
+
+/* Custom cinematic glow & vignette effects */
+.radial-glow {
+  background: radial-gradient(circle at 50% 20%, rgba(225, 29, 72, 0.15) 0%, rgba(15, 23, 42, 0) 70%);
+}
+
+.amber-glow {
+  background: radial-gradient(circle at 50% 80%, rgba(245, 158, 11, 0.12) 0%, rgba(15, 23, 42, 0) 70%);
+}
+
+.film-grain {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 0);
+  background-size: 24px 24px;
+}
