@@ -32,7 +32,11 @@ export const metadata: Metadata = {
     description:
       "Transform two photos into an emotional zombie match-cut film: from post-apocalyptic terror to a golden meadow embrace.",
     type: "website",
-    url: "https://zombie-love-story-ai.vercel.app",
+    url: "https://zombie-love.com",
+    siteName: "Zombie Love Story AI",
+  },
+  alternates: {
+    canonical: "https://zombie-love.com",
   },
   twitter: {
     card: "summary_large_image",
