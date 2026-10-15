@@ -35,8 +35,8 @@ async function getDbPosts(): Promise<BlogPost[]> {
  * All blog posts: database posts merged with local MDX posts,
  * deduped by slug (database wins), newest first.
  */
-export const getBlogPostsFn = createServerFn()
-  .inputValidator((data: { locale: string; limit?: number }) => data)
+export const getBlogPostsFn = createServerFn({ method: 'GET' })
+  .validator((data: { locale: string; limit?: number }) => data)
   .handler(async ({ data }) => {
     const dbPosts = await getDbPosts();
     return mergePosts(dbPosts, getLocalPosts(data.locale), {
@@ -49,8 +49,8 @@ export const getBlogPostsFn = createServerFn()
  * Local posts return meta only — the route component resolves the MDX
  * Content from the bundled glob map (components don't serialize).
  */
-export const getBlogPostFn = createServerFn()
-  .inputValidator((data: { slug: string; locale: string }) => data)
+export const getBlogPostFn = createServerFn({ method: 'GET' })
+  .validator((data: { slug: string; locale: string }) => data)
   .handler(async ({ data }): Promise<BlogPostDetail | null> => {
     try {
       const { findPublishedBySlug } = await import('@/modules/posts/service');
