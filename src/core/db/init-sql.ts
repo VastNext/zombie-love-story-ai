@@ -104,4 +104,16 @@ CREATE TABLE IF NOT EXISTS \`subscription\` (
 	\`created_at\` integer DEFAULT (cast((julianday('now') - 2440587.5)*86400000 as integer)) NOT NULL,
 	\`updated_at\` integer DEFAULT (cast((julianday('now') - 2440587.5)*86400000 as integer)) NOT NULL
 );
+
+-- Seed default super_admin role
+INSERT OR IGNORE INTO \`role\` (\`id\`, \`name\`, \`title\`, \`description\`, \`status\`, \`sort\`, \`created_at\`, \`updated_at\`)
+VALUES ('role-super-admin', 'super_admin', 'Super Admin', 'Full system access', 'active', 1, (cast((julianday('now') - 2440587.5)*86400000 as integer)), (cast((julianday('now') - 2440587.5)*86400000 as integer)));
+
+-- Seed fountain.chan19@gmail.com as super_admin
+INSERT OR IGNORE INTO \`user\` (\`id\`, \`name\`, \`email\`, \`email_verified\`, \`created_at\`, \`updated_at\`)
+VALUES ('user-fountain-chan', 'Fountain Chan', 'fountain.chan19@gmail.com', 1, (cast((julianday('now') - 2440587.5)*86400000 as integer)), (cast((julianday('now') - 2440587.5)*86400000 as integer)));
+
+INSERT OR IGNORE INTO \`user_role\` (\`id\`, \`user_id\`, \`role_id\`, \`created_at\`, \`updated_at\`)
+SELECT 'ur-fountain-admin', id, 'role-super-admin', (cast((julianday('now') - 2440587.5)*86400000 as integer)), (cast((julianday('now') - 2440587.5)*86400000 as integer))
+FROM \`user\` WHERE email = 'fountain.chan19@gmail.com';
 `;
