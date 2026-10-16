@@ -79,17 +79,25 @@ let emailVerificationEnabledLoaded = false;
 function getSocialProviders(configs: Record<string, string>) {
   const providers: Record<string, any> = {};
 
-  if (configs.google_client_id && configs.google_client_secret) {
+  const googleClientId =
+    configs.google_client_id || envConfigs.google_client_id;
+  const googleClientSecret =
+    configs.google_client_secret || envConfigs.google_client_secret;
+  if (googleClientId && googleClientSecret) {
     providers.google = {
-      clientId: configs.google_client_id,
-      clientSecret: configs.google_client_secret,
+      clientId: googleClientId,
+      clientSecret: googleClientSecret,
     };
   }
 
-  if (configs.github_client_id && configs.github_client_secret) {
+  const githubClientId =
+    configs.github_client_id || envConfigs.github_client_id;
+  const githubClientSecret =
+    configs.github_client_secret || envConfigs.github_client_secret;
+  if (githubClientId && githubClientSecret) {
     providers.github = {
-      clientId: configs.github_client_id,
-      clientSecret: configs.github_client_secret,
+      clientId: githubClientId,
+      clientSecret: githubClientSecret,
     };
   }
 
@@ -98,13 +106,11 @@ function getSocialProviders(configs: Record<string, string>) {
 
 function getSocialSignature(configs: Record<string, string>) {
   return [
-    configs.google_client_id || '',
-    configs.google_client_secret || '',
-    configs.github_client_id || '',
-    configs.github_client_secret || '',
-    // Including the one-tap flag here so toggling it without changing
-    // credentials still rebuilds authInstance (which owns the plugin list).
-    configs.google_one_tap_enabled || '',
+    configs.google_client_id || envConfigs.google_client_id || '',
+    configs.google_client_secret || envConfigs.google_client_secret || '',
+    configs.github_client_id || envConfigs.github_client_id || '',
+    configs.github_client_secret || envConfigs.github_client_secret || '',
+    configs.google_one_tap_enabled || envConfigs.google_one_tap_enabled || '',
   ].join('|');
 }
 
