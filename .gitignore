@@ -57,7 +57,7 @@ yarn-error.log*
 *.tsbuildinfo
 
 # database
-/data/
+# /data/
 /drizzle/
 src/config/db/schema.ts
 
