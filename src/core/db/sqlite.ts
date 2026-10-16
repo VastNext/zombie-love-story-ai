@@ -101,5 +101,21 @@ export function createSqliteDb(config: DbConfig) {
     url: finalUrl,
     ...options,
   });
+
+  // Ensure tables exist on Vercel ephemeral storage
+  if (process.env.VERCEL) {
+    try {
+      const { INIT_SQL } = require('./init-sql');
+      const statements = INIT_SQL.split(';')
+        .map((s: string) => s.trim())
+        .filter((s: string) => s.length > 0);
+      for (const stmt of statements) {
+        client.execute(stmt).catch(() => {});
+      }
+    } catch (e) {
+      console.error('[db] failed to run init sql:', e);
+    }
+  }
+
   return drizzle({ client });
 }
