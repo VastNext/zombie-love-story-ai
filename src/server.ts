@@ -28,6 +28,17 @@ function ensureCloudflareEnv(): Promise<void> {
 // getLocale() resolves per-request (AsyncLocalStorage) during SSR.
 export default {
   async fetch(req: Request): Promise<Response> {
+    const url = new URL(req.url);
+
+    // Direct mount for better-auth: /api/auth/* bypasses router/SSR pipeline directly
+    if (url.pathname.startsWith('/api/auth')) {
+      const { getAuth } = await import('./core/auth');
+      const { getDbConfigs } = await import('./modules/config/service');
+      const configs = await getDbConfigs();
+      const auth = getAuth(configs);
+      return auth.handler(req);
+    }
+
     await ensureCloudflareEnv();
     const response = await paraglideMiddleware(req, () => handler.fetch(req));
     const utmSource = new URL(req.url).searchParams.get('utm_source');
