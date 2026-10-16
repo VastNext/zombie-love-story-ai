@@ -22,6 +22,7 @@ export function createSqliteDb(config: DbConfig) {
     process.env.VERCEL &&
     (finalUrl.startsWith('file:data/') ||
       finalUrl.startsWith('data/') ||
+      finalUrl.includes('local.db') ||
       finalUrl === 'file:data/local.db')
   ) {
     const fs = require('fs');
@@ -32,13 +33,40 @@ export function createSqliteDb(config: DbConfig) {
         fs.mkdirSync(tmpDir, { recursive: true });
       } catch {}
     }
-    const bundledDb = path.join(process.cwd(), 'data/local.db');
     const targetDb = '/tmp/data/local.db';
-    if (fs.existsSync(bundledDb) && !fs.existsSync(targetDb)) {
-      try {
-        fs.copyFileSync(bundledDb, targetDb);
-      } catch {}
+
+    // Check possible locations for bundled database
+    const candidates = [
+      path.join(process.cwd(), 'data', 'local.db'),
+      path.join(
+        process.cwd(),
+        '.vercel',
+        'output',
+        'functions',
+        '__server.func',
+        'data',
+        'local.db'
+      ),
+      path.resolve('data', 'local.db'),
+      '/var/task/data/local.db',
+    ];
+
+    let foundBundled: string | null = null;
+    for (const c of candidates) {
+      if (fs.existsSync(c)) {
+        foundBundled = c;
+        break;
+      }
     }
+
+    if (foundBundled && !fs.existsSync(targetDb)) {
+      try {
+        fs.copyFileSync(foundBundled, targetDb);
+      } catch (e) {
+        console.error('[db] failed to copy local.db to /tmp:', e);
+      }
+    }
+
     finalUrl = 'file:' + targetDb;
   }
 
