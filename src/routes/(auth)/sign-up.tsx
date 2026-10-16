@@ -163,7 +163,14 @@ function SignUpPage() {
   });
 
   async function handleSocial(provider: 'google' | 'github') {
-    await signIn.social({ provider, callbackURL: afterLoginUrl });
+    try {
+      const res = await signIn.social({ provider, callbackURL: afterLoginUrl });
+      if ((res as any)?.url) {
+        window.location.href = (res as any).url;
+      }
+    } catch (e: any) {
+      setError(e?.message || 'Social sign-in failed');
+    }
   }
 
   return (
