@@ -28,7 +28,10 @@ export interface VideoModelSpec {
 
 /**
  * 默认规格：字段名来自 SeeAPI 公开文档的 Wan 系列示例。
- * 实际投产前需用账户权限与真实样片确认，并据成本调整时长。
+ *
+ * 默认时长 25 秒（与产品定位一致）。实际投产前必须用真实样片确认
+ * 该时长在 $4.99 售价下仍可盈利；若不可行，须先与用户确认再调整，
+ * 不能悄悄降为短片。可用 ZOMBIE_VIDEO_DURATION_SECONDS 覆盖。
  */
 export const DEFAULT_VIDEO_SPEC: VideoModelSpec = {
   model: 'wan-3-0',
@@ -37,7 +40,7 @@ export const DEFAULT_VIDEO_SPEC: VideoModelSpec = {
   firstFrameField: 'first_frame_image',
   lastFrameField: 'last_frame_image',
   durationField: 'duration_seconds',
-  durationSeconds: 5,
+  durationSeconds: 25,
   aspectField: 'aspect_ratio',
 };
 

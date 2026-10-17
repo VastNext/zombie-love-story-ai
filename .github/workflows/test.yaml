@@ -11,16 +11,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Match the Dockerfile: pnpm 10 (v11 makes ignored build scripts fatal).
+      # No `cache: pnpm` — that makes setup-node run `pnpm store path`, which
+      # trips over this repo's pnpm-workspace.yaml before install.
       - uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 10
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: pnpm
 
-      - run: pnpm install --frozen-lockfile
+      - name: Install
+        run: pnpm install --frozen-lockfile
 
       - name: Unit + integration tests
         run: pnpm test
