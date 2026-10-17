@@ -40,7 +40,9 @@ async function createScriptDb() {
   // Default: SQLite / Turso via libsql
   const { createClient } = await import('@libsql/client');
   const { drizzle } = await import('drizzle-orm/libsql');
-  const client = createClient({ url });
+  // Turso 必须带 authToken，否则远端返回 401
+  const authToken = process.env.DATABASE_AUTH_TOKEN;
+  const client = createClient(authToken ? { url, authToken } : { url });
   return { db: drizzle({ client }) as any, close: () => {} };
 }
 

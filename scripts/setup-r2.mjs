@@ -13,8 +13,16 @@
  * 安全：Access Key / Secret 只写进 .env.local（已被 .gitignore 忽略）与 stdout 之外的地方，
  *      绝不打印到日志。脚本只回显变量名与长度。
  */
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+
+/**
+ * R2 的 S3 凭据换算（官方文档）：
+ *   Access Key ID     = token 的 `id`
+ *   Secret Access Key = SHA-256(token 的 `value`) 的十六进制
+ * 直接拿原始 value 当 Secret 会得到 SignatureDoesNotMatch —— 这是本脚本第一版踩过的坑。
+ */
 
 const API = 'https://api.cloudflare.com/client/v4';
 const token = process.env.CF_API_TOKEN;
@@ -63,14 +71,16 @@ async function ensureBucket() {
 }
 
 async function createS3Credential() {
-  // 找到 "Workers R2 Storage Write" 权限组的 id（不硬编码，避免变更导致失效）
+  // 最小权限：只授权这一个桶（Bucket 维度资源 + "Bucket Item Write" 权限组）
   const groups = await cf(`/accounts/${accountId}/tokens/permission_groups`);
   const group = (groups ?? []).find(
-    (g) => g.name === 'Workers R2 Storage Write'
+    (g) => g.name === 'Workers R2 Storage Bucket Item Write'
   );
   if (!group) {
-    throw new Error('未找到权限组 "Workers R2 Storage Write"');
+    throw new Error('未找到权限组 "Workers R2 Storage Bucket Item Write"');
   }
+
+  const bucketResource = `com.cloudflare.edge.r2.bucket.${accountId}_default_${bucket}`;
 
   const created = await cf(`/accounts/${accountId}/tokens`, {
     method: 'POST',
@@ -79,7 +89,7 @@ async function createS3Credential() {
       policies: [
         {
           effect: 'allow',
-          resources: { [`com.cloudflare.api.account.${accountId}`]: '*' },
+          resources: { [bucketResource]: '*' },
           permission_groups: [{ id: group.id }],
         },
       ],
@@ -87,11 +97,49 @@ async function createS3Credential() {
   });
 
   const accessKey = created?.id;
-  const secretKey = created?.value;
-  if (!accessKey || !secretKey) {
+  const rawValue = created?.value;
+  if (!accessKey || !rawValue) {
     throw new Error('创建 token 成功但未返回 id/value，无法作为 S3 凭据');
   }
-  return { accessKey, secretKey };
+
+  // 关键：Secret 是 value 的 SHA-256 十六进制，不是 value 本身
+  const secretKey = createHash('sha256').update(rawValue).digest('hex');
+  return { accessKey, secretKey, tokenId: accessKey };
+}
+
+/** 创建后立刻用 S3 往返自检；不合格就删掉 token 并报错，绝不写坏凭据。 */
+async function selfCheck({ accessKey, secretKey, tokenId }) {
+  const { AwsClient } = await import('aws4fetch');
+  const client = new AwsClient({
+    accessKeyId: accessKey,
+    secretAccessKey: secretKey,
+    region: 'auto',
+    service: 's3',
+  });
+  const endpoint = `https://${accountId}.r2.cloudflarestorage.com/${bucket}`;
+  const key = `uploads/_selfcheck_${Date.now()}.txt`;
+
+  const put = await client.fetch(`${endpoint}/${key}`, {
+    method: 'PUT',
+    body: 'selfcheck',
+  });
+  if (put.status !== 200) {
+    const detail = (await put.text()).slice(0, 200);
+    await cf(`/accounts/${accountId}/tokens/${tokenId}`, { method: 'DELETE' });
+    throw new Error(
+      `S3 自检失败（PUT ${put.status}）：${detail}。已删除该 token，未写入任何配置。`
+    );
+  }
+
+  const get = await client.fetch(`${endpoint}/${key}`);
+  const body = await get.text();
+  await client.fetch(`${endpoint}/${key}`, { method: 'DELETE' });
+
+  if (get.status !== 200 || body !== 'selfcheck') {
+    await cf(`/accounts/${accountId}/tokens/${tokenId}`, { method: 'DELETE' });
+    throw new Error('S3 自检失败（GET 校验不符）。已删除该 token。');
+  }
+  console.log('[r2] S3 往返自检通过（PUT/GET/DELETE）');
 }
 
 function upsertEnvLocal(vars) {
@@ -114,9 +162,11 @@ const vars = {
 };
 
 await ensureBucket();
-const { accessKey, secretKey } = await createS3Credential();
-vars.R2_ACCESS_KEY = accessKey;
-vars.R2_SECRET_KEY = secretKey;
+const credential = await createS3Credential();
+// 先自检，通过后才落盘——避免把不可用的凭据写进环境
+await selfCheck(credential);
+vars.R2_ACCESS_KEY = credential.accessKey;
+vars.R2_SECRET_KEY = credential.secretKey;
 
 upsertEnvLocal(vars);
 
