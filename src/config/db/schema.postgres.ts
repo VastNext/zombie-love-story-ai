@@ -645,8 +645,10 @@ export const zombieOrder = table(
   'zombie_order',
   {
     id: text('id').primaryKey(),
+    orderNo: text('order_no').notNull().unique(),
     accessTokenHash: text('access_token_hash').notNull(),
     source: text('source').notNull(),
+    createdByUserId: text('created_by_user_id'),
     status: text('status').notNull(),
     aspectRatio: text('aspect_ratio').notNull(),
     photo1Key: text('photo1_key'),

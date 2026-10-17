@@ -570,8 +570,10 @@ export const zombieOrder = table(
   'zombie_order',
   {
     id: varchar191('id').primaryKey(),
+    orderNo: varchar191('order_no').notNull().unique(),
     accessTokenHash: varchar191('access_token_hash').notNull(),
     source: varchar191('source').notNull(),
+    createdByUserId: varchar191('created_by_user_id'),
     status: varchar191('status').notNull(),
     aspectRatio: varchar191('aspect_ratio').notNull(),
     photo1Key: text('photo1_key'),

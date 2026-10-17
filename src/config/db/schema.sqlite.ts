@@ -710,10 +710,14 @@ export const zombieOrder = table(
   'zombie_order',
   {
     id: text('id').primaryKey(),
+    // 面向用户的订单号，便于人工核对（非访问凭证）
+    orderNo: text('order_no').notNull().unique(),
     // 高熵访问令牌的 sha256 十六进制；原始令牌从不落库
     accessTokenHash: text('access_token_hash').notNull(),
     // 'admin_test' | 'stripe'
     source: text('source').notNull(),
+    // 管理员测试的来源账号，用于按人计数
+    createdByUserId: text('created_by_user_id'),
     // draft | checkout_pending | paid | queued | submitted | processing
     // | succeeded | failed_needs_attention | refunded | canceled | expired
     status: text('status').notNull(),
