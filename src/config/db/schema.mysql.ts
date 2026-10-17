@@ -564,5 +564,59 @@ export type NewTicket = typeof ticket.$inferInsert;
 export type TicketMessage = typeof ticketMessage.$inferSelect;
 export type NewTicketMessage = typeof ticketMessage.$inferInsert;
 
+// ─── Zombie Love Story (一次性付费视频订单) ───────────────────────────────────
+
+export const zombieOrder = table(
+  'zombie_order',
+  {
+    id: varchar191('id').primaryKey(),
+    accessTokenHash: varchar191('access_token_hash').notNull(),
+    source: varchar191('source').notNull(),
+    status: varchar191('status').notNull(),
+    aspectRatio: varchar191('aspect_ratio').notNull(),
+    photo1Key: text('photo1_key'),
+    photo2Key: text('photo2_key'),
+    notifyEmail: varchar191('notify_email'),
+    priceCents: int('price_cents').notNull(),
+    currency: varchar191('currency').notNull().default('usd'),
+    stripeSessionId: varchar191('stripe_session_id').unique(),
+    stripePaymentIntentId: varchar191('stripe_payment_intent_id'),
+    requestVersion: varchar191('request_version').notNull().default('v1'),
+    seeapiModel: varchar191('seeapi_model'),
+    seeapiProvider: varchar191('seeapi_provider'),
+    idempotencyKey: varchar191('idempotency_key').unique(),
+    taskId: varchar191('task_id'),
+    videoUrl: text('video_url'),
+    videoAssetId: varchar191('video_asset_id'),
+    videoExpiresAt: timestamp('video_expires_at'),
+    attempts: int('attempts').notNull().default(0),
+    errorCode: varchar191('error_code'),
+    nextAttemptAt: timestamp('next_attempt_at'),
+    leaseOwner: varchar191('lease_owner'),
+    leaseUntil: timestamp('lease_until'),
+    notifyStatus: varchar191('notify_status').notNull().default('none'),
+    notifyAttempts: int('notify_attempts').notNull().default(0),
+    notifyNextAt: timestamp('notify_next_at'),
+    testCode: varchar191('test_code'),
+    paidAt: timestamp('paid_at'),
+    submittedAt: timestamp('submitted_at'),
+    completedAt: timestamp('completed_at'),
+    downloadExpireAt: timestamp('download_expire_at'),
+    photosDeletedAt: timestamp('photos_deleted_at'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().onUpdateNow().notNull(),
+    deletedAt: timestamp('deleted_at'),
+  },
+  (table) => [
+    index('idx_zombie_order_status_next').on(table.status, table.nextAttemptAt),
+    index('idx_zombie_order_notify').on(table.notifyStatus, table.notifyNextAt),
+    index('idx_zombie_order_created').on(table.createdAt),
+    index('idx_zombie_order_source').on(table.source, table.status),
+  ]
+);
+
+export type ZombieOrder = typeof zombieOrder.$inferSelect;
+export type NewZombieOrder = typeof zombieOrder.$inferInsert;
+
 // ─── Custom tables ───────────────────────────────────────────────────────────
 // Add your own tables below this line.

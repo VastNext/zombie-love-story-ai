@@ -638,3 +638,60 @@ export type InviteCode = typeof inviteCode.$inferSelect;
 export type NewInviteCode = typeof inviteCode.$inferInsert;
 export type UserInvite = typeof userInvite.$inferSelect;
 export type NewUserInvite = typeof userInvite.$inferInsert;
+
+// ─── Zombie Love Story (一次性付费视频订单) ───────────────────────────────────
+
+export const zombieOrder = table(
+  'zombie_order',
+  {
+    id: text('id').primaryKey(),
+    accessTokenHash: text('access_token_hash').notNull(),
+    source: text('source').notNull(),
+    status: text('status').notNull(),
+    aspectRatio: text('aspect_ratio').notNull(),
+    photo1Key: text('photo1_key'),
+    photo2Key: text('photo2_key'),
+    notifyEmail: text('notify_email'),
+    priceCents: integer('price_cents').notNull(),
+    currency: text('currency').notNull().default('usd'),
+    stripeSessionId: text('stripe_session_id').unique(),
+    stripePaymentIntentId: text('stripe_payment_intent_id'),
+    requestVersion: text('request_version').notNull().default('v1'),
+    seeapiModel: text('seeapi_model'),
+    seeapiProvider: text('seeapi_provider'),
+    idempotencyKey: text('idempotency_key').unique(),
+    taskId: text('task_id'),
+    videoUrl: text('video_url'),
+    videoAssetId: text('video_asset_id'),
+    videoExpiresAt: timestamp('video_expires_at'),
+    attempts: integer('attempts').notNull().default(0),
+    errorCode: text('error_code'),
+    nextAttemptAt: timestamp('next_attempt_at'),
+    leaseOwner: text('lease_owner'),
+    leaseUntil: timestamp('lease_until'),
+    notifyStatus: text('notify_status').notNull().default('none'),
+    notifyAttempts: integer('notify_attempts').notNull().default(0),
+    notifyNextAt: timestamp('notify_next_at'),
+    testCode: text('test_code'),
+    paidAt: timestamp('paid_at'),
+    submittedAt: timestamp('submitted_at'),
+    completedAt: timestamp('completed_at'),
+    downloadExpireAt: timestamp('download_expire_at'),
+    photosDeletedAt: timestamp('photos_deleted_at'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+    deletedAt: timestamp('deleted_at'),
+  },
+  (table) => [
+    index('idx_zombie_order_status_next').on(table.status, table.nextAttemptAt),
+    index('idx_zombie_order_notify').on(table.notifyStatus, table.notifyNextAt),
+    index('idx_zombie_order_created').on(table.createdAt),
+    index('idx_zombie_order_source').on(table.source, table.status),
+  ]
+);
+
+export type ZombieOrder = typeof zombieOrder.$inferSelect;
+export type NewZombieOrder = typeof zombieOrder.$inferInsert;

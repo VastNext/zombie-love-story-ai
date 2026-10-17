@@ -700,3 +700,82 @@ export type InviteCode = typeof inviteCode.$inferSelect;
 export type NewInviteCode = typeof inviteCode.$inferInsert;
 export type UserInvite = typeof userInvite.$inferSelect;
 export type NewUserInvite = typeof userInvite.$inferInsert;
+
+// ─── Zombie Love Story (一次性付费视频订单) ───────────────────────────────────
+//
+// 独立于通用 order/credits 体系：游客可下单，不发放积分，不依赖登录。
+// source=admin_test 的订单永远是零金额且绝不标记为 Stripe paid。
+
+export const zombieOrder = table(
+  'zombie_order',
+  {
+    id: text('id').primaryKey(),
+    // 高熵访问令牌的 sha256 十六进制；原始令牌从不落库
+    accessTokenHash: text('access_token_hash').notNull(),
+    // 'admin_test' | 'stripe'
+    source: text('source').notNull(),
+    // draft | checkout_pending | paid | queued | submitted | processing
+    // | succeeded | failed_needs_attention | refunded | canceled | expired
+    status: text('status').notNull(),
+    aspectRatio: text('aspect_ratio').notNull(), // '9:16' | '16:9'
+    photo1Key: text('photo1_key'),
+    photo2Key: text('photo2_key'),
+    notifyEmail: text('notify_email'),
+    priceCents: integer('price_cents').notNull(),
+    currency: text('currency').notNull().default('usd'),
+
+    // Stripe 收款
+    stripeSessionId: text('stripe_session_id').unique(),
+    stripePaymentIntentId: text('stripe_payment_intent_id'),
+
+    // SeeAPI 生成任务
+    requestVersion: text('request_version').notNull().default('v1'),
+    seeapiModel: text('seeapi_model'),
+    seeapiProvider: text('seeapi_provider'),
+    idempotencyKey: text('idempotency_key').unique(),
+    taskId: text('task_id'),
+    videoUrl: text('video_url'),
+    videoAssetId: text('video_asset_id'),
+    videoExpiresAt: integer('video_expires_at', { mode: 'timestamp_ms' }),
+
+    // 异步 worker（租约防重复认领）
+    attempts: integer('attempts').notNull().default(0),
+    errorCode: text('error_code'),
+    nextAttemptAt: integer('next_attempt_at', { mode: 'timestamp_ms' }),
+    leaseOwner: text('lease_owner'),
+    leaseUntil: integer('lease_until', { mode: 'timestamp_ms' }),
+
+    // 邮件通知（与生成状态解耦）
+    notifyStatus: text('notify_status').notNull().default('none'),
+    notifyAttempts: integer('notify_attempts').notNull().default(0),
+    notifyNextAt: integer('notify_next_at', { mode: 'timestamp_ms' }),
+
+    // 管理员测试来源标记
+    testCode: text('test_code'),
+
+    // 生命周期时间戳
+    paidAt: integer('paid_at', { mode: 'timestamp_ms' }),
+    submittedAt: integer('submitted_at', { mode: 'timestamp_ms' }),
+    completedAt: integer('completed_at', { mode: 'timestamp_ms' }),
+    downloadExpireAt: integer('download_expire_at', { mode: 'timestamp_ms' }),
+    photosDeletedAt: integer('photos_deleted_at', { mode: 'timestamp_ms' }),
+
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
+      .default(sqliteNowMs)
+      .notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+      .default(sqliteNowMs)
+      .$onUpdate(() => new Date())
+      .notNull(),
+    deletedAt: integer('deleted_at', { mode: 'timestamp_ms' }),
+  },
+  (t) => [
+    index('idx_zombie_order_status_next').on(t.status, t.nextAttemptAt),
+    index('idx_zombie_order_notify').on(t.notifyStatus, t.notifyNextAt),
+    index('idx_zombie_order_created').on(t.createdAt),
+    index('idx_zombie_order_source').on(t.source, t.status),
+  ]
+);
+
+export type ZombieOrder = typeof zombieOrder.$inferSelect;
+export type NewZombieOrder = typeof zombieOrder.$inferInsert;
