@@ -184,7 +184,7 @@ export async function getActiveTasksForSession(params: {
     )
     .orderBy(desc(aiTask.createdAt));
 
-  return rows.filter((task) => taskSessionId(task) === params.sessionId);
+  return rows.filter((task: any) => taskSessionId(task) === params.sessionId);
 }
 
 /**

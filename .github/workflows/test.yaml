@@ -25,6 +25,11 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      # The build generates the gitignored artifacts the app and type checker
+      # depend on: src/paraglide/** (i18n) and src/routeTree.gen.ts.
+      - name: Build (generates paraglide + route tree)
+        run: pnpm build
+
       - name: Unit + integration tests
         run: pnpm test
 
