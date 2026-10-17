@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { envConfigs } from '@/config';
 import { apiPost } from '@/lib/api-client';
 
 export function Hero() {
@@ -518,6 +519,33 @@ export function Hero() {
             </div>
           </div>
         </div>
+      </section>
+
+      {/* Sample video — only shown when a rights-cleared sample is configured */}
+      <section id="sample" className="w-full max-w-5xl px-6 pt-16">
+        <div className="mx-auto mb-8 max-w-2xl text-center">
+          <span className="font-mono text-xs tracking-wider text-rose-400 uppercase">
+            See it first
+          </span>
+          <h2 className="text-foreground mt-1 text-3xl font-semibold tracking-tight">
+            A real match-cut, end to end
+          </h2>
+        </div>
+        {envConfigs.zombie_sample_video_url ? (
+          <video
+            src={envConfigs.zombie_sample_video_url}
+            controls
+            playsInline
+            className="border-border mx-auto w-full max-w-md rounded-2xl border"
+          />
+        ) : (
+          <div className="border-border bg-card mx-auto flex aspect-[9/16] w-full max-w-md items-center justify-center rounded-2xl border border-dashed p-8 text-center">
+            <p className="text-muted-foreground text-xs leading-relaxed">
+              Sample video coming soon. We publish a sample only once it is
+              produced with our own pipeline and cleared for display.
+            </p>
+          </div>
+        )}
       </section>
 
       {/* Narrative Match-Cut Breakdown */}

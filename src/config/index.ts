@@ -111,6 +111,9 @@ export const envConfigs: Record<string, string> = {
   zombie_video_provider: procEnv.ZOMBIE_VIDEO_PROVIDER ?? '',
   zombie_video_duration_seconds: procEnv.ZOMBIE_VIDEO_DURATION_SECONDS ?? '',
 
+  // Zombie Love Story — 落地页示例视频（公开；留空则显示占位而非坏播放器）
+  zombie_sample_video_url: publicEnv('VITE_ZOMBIE_SAMPLE_VIDEO_URL') ?? '',
+
   // Locale (public)
   locale: publicEnv('VITE_DEFAULT_LOCALE') ?? 'en',
 };

@@ -31,10 +31,12 @@ function harness(order: any, mailOk: boolean, token: string | null = 'tok') {
   } as any;
 
   const mailer = {
-    send: vi.fn(async () => ({
-      ok: mailOk,
-      error: mailOk ? undefined : 'smtp',
-    })),
+    send: vi.fn(
+      async (_mail: { to: string; subject: string; html: string }) => ({
+        ok: mailOk,
+        error: mailOk ? undefined : 'smtp',
+      })
+    ),
   };
 
   const notifier = createNotifier({
