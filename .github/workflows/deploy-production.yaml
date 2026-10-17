@@ -1,0 +1,45 @@
+name: Deploy production (tag)
+
+# 生产部署由打 tag 触发：push 一个 v* 标签才会部署，日常 push 不会动生产。
+# 例：git tag v0.1.0 && git push origin v0.1.0
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+concurrency:
+  # 同一时间只允许一个生产部署，避免并发互相覆盖
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 与 Dockerfile / test 工作流一致：pnpm 10
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # 测试不通过就不部署：这是"构建成功才上线"的门禁
+      - name: Tests gate
+        run: pnpm test
+
+      # Vercel 侧构建（不在 runner 里构建，省时间也避免环境差异）。
+      # 凭据来自 GitHub Secrets：VERCEL_TOKEN / VERCEL_ORG_ID / VERCEL_PROJECT_ID。
+      # VERCEL_TOKEN 走环境变量而非 --token 参数，避免出现在命令行里。
+      - name: Deploy to Vercel (production)
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: npx --yes vercel@latest deploy --prod --yes
