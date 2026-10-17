@@ -74,6 +74,17 @@ export const envConfigs: Record<string, string> = {
   storage_public_domain: procEnv.STORAGE_PUBLIC_DOMAIN ?? '',
   inline_image_max_kb: procEnv.INLINE_IMAGE_MAX_KB ?? '2048',
 
+  // Storage - R2 (the `r2_*` keys the storage service actually reads).
+  // Env fallback so a deployment can be configured without the admin panel;
+  // DB values still win (getAllConfigs merges env first, then DB).
+  r2_account_id: procEnv.R2_ACCOUNT_ID ?? '',
+  r2_access_key: procEnv.R2_ACCESS_KEY ?? '',
+  r2_secret_key: procEnv.R2_SECRET_KEY ?? '',
+  r2_bucket_name: procEnv.R2_BUCKET_NAME ?? '',
+  r2_endpoint: procEnv.R2_ENDPOINT ?? '',
+  r2_domain: procEnv.R2_DOMAIN ?? '',
+  r2_upload_path: procEnv.R2_UPLOAD_PATH ?? '',
+
   // Auth - Google / Social
   google_auth_enabled: procEnv.GOOGLE_AUTH_ENABLED ?? 'false',
   google_client_id: procEnv.GOOGLE_CLIENT_ID ?? '',
