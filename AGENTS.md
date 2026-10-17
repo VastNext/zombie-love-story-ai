@@ -81,7 +81,25 @@ pnpm dev                      # 开发服务器 :3000
 HTTP_PROXY=http://127.0.0.1:7890 HTTPS_PROXY=http://127.0.0.1:7890 pnpm build
 ```
 
-`routeTree.gen.ts` 为生成物（gitignore），由 `vite build`/dev 自动重建；新增路由后若 tsc 报 route id 错误，跑一次 build 即可。
+`routeTree.gen.ts` 与 `src/paraglide/` 均为生成物（gitignore）。CI 之所以能通过类型检查，是因为工作流**先 build 再 tsc**；干净检出直接跑 `tsc` 会报大量「找不到模块」。
+
+### 部署（重要）
+
+生产部署**不是** Git 集成，push 不会自动上线。必须手工：
+
+```bash
+HTTP_PROXY=http://127.0.0.1:7890 HTTPS_PROXY=http://127.0.0.1:7890 \
+  vercel deploy --prod --yes
+```
+
+不加代理会 `Error: fetch failed`（上传成功但 API 调用失败）。部署后**必须**验证（不能只看 Ready）：
+
+```bash
+curl -s https://zombie-love.com/api/zombie/mode      # 期望 200 + JSON
+curl -s -o /dev/null -w '%{http_code}\n' https://zombie-love.com/zombie/order   # 期望 200
+```
+
+排查「改动没生效」的第一反应：`vercel inspect https://zombie-love.com` 看部署时间与 git 元数据——若没有 git 信息，说明是 CLI 手动发的。
 
 ---
 
@@ -109,6 +127,8 @@ HTTP_PROXY=http://127.0.0.1:7890 HTTPS_PROXY=http://127.0.0.1:7890 pnpm build
 
 ## 七、已知限制（脚本/文档不得当作已完成）
 
-- **生产持久化未落实**：`src/core/db/sqlite.ts` 在 Vercel 把库复制到 `/tmp`，实例间不共享、重新部署即丢。上线收款前必须配置**托管持久数据库**（如 Turso）并跑迁移；`init-sql.ts` 不能替代迁移。
+- **对象存储是硬依赖**：SeeAPI 已实证要求 `first_frame_image` 为 **URL**（传数字返回 `must be a URL or an array of URLs`），**不接受 base64**。因此两张肖像必须先落到对象存储。R2 可通过 `R2_*` 环境变量配置（见 `.env.example`），或写进后台配置（DB 优先）；私有桶用预签名 URL 供 SeeAPI 拉取。
+- **生产持久化未落实**：`src/core/db/sqlite.ts` 在 Vercel 把库复制到 `/tmp`，实例间不共享、重新部署即丢。上线收款前必须配置**托管持久数据库**（如 Turso）并跑迁移；`init-sql.ts` 不能替代迁移。生产现有 `DATABASE_PROVIDER`/`DATABASE_URL`（Sensitive 不可回读）但**没有 `DATABASE_AUTH_TOKEN`**，故大概率不是 Turso——需人工确认后替换。
+- **机器对机器端点必须用真实 HTTP 状态码**：`respErr()` 是给浏览器 API 用的，返回 HTTP 200 + `code:-1`。Stripe webhook 若在出错时回 200，Stripe 不会重试 → 静默丢单。zombie 的 webhook/cron 已改用 400/403/500。
 - 仓库**无 E2E/浏览器测试**；组件级交互属人工闸门。
 - 通用 `order`/credits/聊天/`/pricing` 页面为模板遗留，不属于本产品主链路；Zombie 订单不发放积分。
