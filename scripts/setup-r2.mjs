@@ -71,16 +71,16 @@ async function ensureBucket() {
 }
 
 async function createS3Credential() {
-  // 最小权限：只授权这一个桶（Bucket 维度资源 + "Bucket Item Write" 权限组）
+  // 必须用「账户级」权限组 + 「账户范围」资源。
+  // 实测：把资源收窄成 bucket 维度（com.cloudflare.edge.r2.bucket...）会让
+  // R2 的 S3 端点返回 401 Unauthorized，即使 token 本身有效。
   const groups = await cf(`/accounts/${accountId}/tokens/permission_groups`);
   const group = (groups ?? []).find(
-    (g) => g.name === 'Workers R2 Storage Bucket Item Write'
+    (g) => g.name === 'Workers R2 Storage Write'
   );
   if (!group) {
-    throw new Error('未找到权限组 "Workers R2 Storage Bucket Item Write"');
+    throw new Error('未找到权限组 "Workers R2 Storage Write"');
   }
-
-  const bucketResource = `com.cloudflare.edge.r2.bucket.${accountId}_default_${bucket}`;
 
   const created = await cf(`/accounts/${accountId}/tokens`, {
     method: 'POST',
@@ -89,7 +89,7 @@ async function createS3Credential() {
       policies: [
         {
           effect: 'allow',
-          resources: { [bucketResource]: '*' },
+          resources: { [`com.cloudflare.api.account.${accountId}`]: '*' },
           permission_groups: [{ id: group.id }],
         },
       ],
@@ -119,15 +119,23 @@ async function selfCheck({ accessKey, secretKey, tokenId }) {
   const endpoint = `https://${accountId}.r2.cloudflarestorage.com/${bucket}`;
   const key = `uploads/_selfcheck_${Date.now()}.txt`;
 
-  const put = await client.fetch(`${endpoint}/${key}`, {
-    method: 'PUT',
-    body: 'selfcheck',
-  });
-  if (put.status !== 200) {
-    const detail = (await put.text()).slice(0, 200);
+  // 新建的 R2 凭据需要一点时间才会被 S3 端点接受（实测存在传播延迟），
+  // 因此这里必须退避重试；一次失败就判死会误报成"权限不足"。
+  let put = null;
+  for (let attempt = 1; attempt <= 6; attempt++) {
+    put = await client.fetch(`${endpoint}/${key}`, {
+      method: 'PUT',
+      body: 'selfcheck',
+    });
+    if (put.status === 200) break;
+    if (attempt < 6) await new Promise((r) => setTimeout(r, attempt * 2000));
+  }
+
+  if (!put || put.status !== 200) {
+    const detail = put ? (await put.text()).slice(0, 200) : 'no response';
     await cf(`/accounts/${accountId}/tokens/${tokenId}`, { method: 'DELETE' });
     throw new Error(
-      `S3 自检失败（PUT ${put.status}）：${detail}。已删除该 token，未写入任何配置。`
+      `S3 自检失败（PUT ${put?.status}，已重试 6 次）：${detail}。已删除该 token，未写入任何配置。`
     );
   }
 
