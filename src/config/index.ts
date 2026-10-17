@@ -103,6 +103,8 @@ export const envConfigs: Record<string, string> = {
   zombie_admin_test_global_limit:
     procEnv.ZOMBIE_ADMIN_TEST_GLOBAL_LIMIT ?? '10',
   zombie_generation_paused: procEnv.ZOMBIE_GENERATION_PAUSED ?? 'false',
+  // cron/内部任务端点的一次性校验密钥（Vercel Cron 会带 x-vercel-cron 头）
+  zombie_cron_secret: procEnv.ZOMBIE_CRON_SECRET ?? '',
 
   // Zombie Love Story — 视频模型规格（验证后可改，不必动路由）
   zombie_video_model: procEnv.ZOMBIE_VIDEO_MODEL ?? '',
