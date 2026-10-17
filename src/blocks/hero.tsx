@@ -43,13 +43,6 @@ export function Hero() {
   );
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<{
-    productId: string;
-    name: string;
-    price: string;
-    videos: string;
-    discount?: string;
-  } | null>(null);
   const [isRedirectingToStripe, setIsRedirectingToStripe] = useState(false);
   const [photo1File, setPhoto1File] = useState<File | null>(null);
   const [photo2File, setPhoto2File] = useState<File | null>(null);
@@ -97,17 +90,6 @@ export function Hero() {
     navigator.clipboard.writeText(text);
     setCopiedPromptIndex(index);
     setTimeout(() => setCopiedPromptIndex(null), 2000);
-  };
-
-  const openCheckout = (plan: {
-    productId: string;
-    name: string;
-    price: string;
-    videos: string;
-    discount?: string;
-  }) => {
-    setSelectedPlan(plan);
-    setIsModalOpen(true);
   };
 
   /** 记住本浏览器的订单入口（无账号用户也能找回）。 */
@@ -259,11 +241,9 @@ export function Hero() {
       <div className="border-border text-muted-foreground flex w-full items-center justify-center gap-2 border-b bg-[#0c0e14] px-4 py-2 text-center text-xs">
         <span className="h-1.5 w-1.5 animate-ping rounded-full bg-rose-500" />
         <span>
-          GPU Batch Pipeline v2.4 in closed beta. Lock in{' '}
-          <strong className="font-semibold text-rose-400">
-            $6.99 Early Access Pass
-          </strong>{' '}
-          before public launch price ($12.99).
+          Two portraits in, one cinematic match-cut out. One-time{' '}
+          <strong className="font-semibold text-rose-400">$4.99</strong> per
+          video.
         </span>
       </div>
 
@@ -295,13 +275,13 @@ export function Hero() {
             <User className="h-3.5 w-3.5 text-rose-400" /> 2 Photos Required
           </span>
           <span className="bg-surface-1 border-border flex items-center gap-1.5 rounded border px-3 py-1">
-            <Film className="h-3.5 w-3.5 text-amber-400" /> 25s 720P Match-Cut
+            <Film className="h-3.5 w-3.5 text-amber-400" /> Cinematic Match-Cut
           </span>
           <span className="bg-surface-1 border-border flex items-center gap-1.5 rounded border px-3 py-1">
             <Video className="h-3.5 w-3.5 text-cyan-400" /> 9:16 & 16:9 Formats
           </span>
           <span className="bg-surface-1 border-border flex items-center gap-1.5 rounded border px-3 py-1">
-            <CreditCard className="h-3.5 w-3.5 text-emerald-400" /> $6.99
+            <CreditCard className="h-3.5 w-3.5 text-emerald-400" /> $4.99
             One-Time (No Sub)
           </span>
         </div>
@@ -740,179 +720,54 @@ export function Hero() {
             Transparent Pricing
           </span>
           <h2 className="text-foreground mt-1 text-3xl font-semibold tracking-tight">
-            One-Time Early Access Passes
+            One video. One price.
           </h2>
           <p className="text-muted-foreground mt-2 text-xs sm:text-sm">
-            No subscription traps. Pay once per video pass with priority queue
-            rendering locked in for early supporters.
+            No subscription traps. Pay once, get one zombie love story video.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 items-stretch gap-6 md:grid-cols-3">
-          {/* Plan 1 */}
-          <div className="bg-card border-border flex flex-col justify-between rounded-2xl border p-7">
-            <div>
-              <span className="text-muted-foreground font-mono text-xs tracking-wider uppercase">
-                Casual Single
-              </span>
-              <div className="mt-4 flex items-baseline gap-1">
-                <span className="text-foreground text-3xl font-bold">
-                  $6.99
-                </span>
-                <span className="text-muted-foreground text-xs">
-                  / one-time
-                </span>
-              </div>
-              <p className="text-muted-foreground mt-2 text-xs">
-                Create one 25-second couple or 15-second pet match-cut reel.
-              </p>
-
-              <ul className="text-muted-foreground mt-6 space-y-2.5 text-xs">
-                <li className="flex items-center gap-2">
-                  <Check className="h-3.5 w-3.5 shrink-0 text-emerald-400" /> 1×
-                  25-Second 720P HD Video
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-3.5 w-3.5 shrink-0 text-emerald-400" />{' '}
-                  9:16 Portrait or 16:9 Landscape
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-3.5 w-3.5 shrink-0 text-emerald-400" />{' '}
-                  Built-in Natural Scene Audio
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-3.5 w-3.5 shrink-0 text-emerald-400" />{' '}
-                  14-Day Media Cloud Retention
-                </li>
-              </ul>
+        <div className="mx-auto max-w-md">
+          <div className="bg-card border-border flex flex-col rounded-2xl border-2 border-rose-500/60 p-7 shadow-xl shadow-rose-950/20">
+            <span className="font-mono text-xs tracking-wider text-rose-400 uppercase">
+              Single Video
+            </span>
+            <div className="mt-4 flex items-baseline gap-1">
+              <span className="text-foreground text-4xl font-bold">$4.99</span>
+              <span className="text-muted-foreground text-xs">/ one-time</span>
             </div>
+            <p className="text-muted-foreground mt-2 text-xs">
+              Two portraits in, one cinematic zombie love story match-cut out.
+            </p>
+
+            <ul className="text-muted-foreground mt-6 space-y-2.5 text-xs">
+              <li className="flex items-center gap-2">
+                <Check className="h-3.5 w-3.5 shrink-0 text-emerald-400" /> 1×
+                zombie love story video
+              </li>
+              <li className="flex items-center gap-2">
+                <Check className="h-3.5 w-3.5 shrink-0 text-emerald-400" /> 9:16
+                Portrait or 16:9 Landscape
+              </li>
+              <li className="flex items-center gap-2">
+                <Check className="h-3.5 w-3.5 shrink-0 text-emerald-400" /> Two
+                portraits: survivor + infected partner
+              </li>
+              <li className="flex items-center gap-2">
+                <Check className="h-3.5 w-3.5 shrink-0 text-emerald-400" />{' '}
+                14-day private download link
+              </li>
+            </ul>
 
             <button
-              onClick={() =>
-                openCheckout({
-                  productId: 'zombie_single',
-                  name: 'Single Video Pass',
-                  price: '$6.99',
-                  videos: '1 HD Video',
-                })
-              }
-              className="bg-surface-2 hover:bg-surface-3 border-border text-foreground mt-8 w-full cursor-pointer rounded-lg border py-2.5 text-xs font-medium transition-colors"
+              onClick={() => setIsModalOpen(true)}
+              className="mt-8 w-full cursor-pointer rounded-lg bg-gradient-to-r from-rose-600 to-amber-600 py-2.5 text-xs font-semibold text-white shadow-md shadow-rose-950 transition-all hover:from-rose-500 hover:to-amber-500"
             >
-              Get 1 Video Pass ($6.99)
+              Generate my video · $4.99
             </button>
-          </div>
-
-          {/* Plan 2: Most Popular */}
-          <div className="bg-card relative flex flex-col justify-between rounded-2xl border-2 border-rose-500/60 p-7 shadow-xl shadow-rose-950/20">
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-rose-500 to-amber-500 px-3 py-0.5 text-[10px] font-semibold tracking-wider text-white uppercase shadow">
-              Best Value (Save 30%)
-            </div>
-
-            <div>
-              <span className="font-mono text-xs tracking-wider text-rose-400 uppercase">
-                Storyteller 3-Pack
-              </span>
-              <div className="mt-4 flex items-baseline gap-1">
-                <span className="text-foreground text-3xl font-bold">
-                  $14.99
-                </span>
-                <span className="text-muted-foreground text-xs">
-                  / 3 videos ($4.99/ea)
-                </span>
-              </div>
-              <p className="text-muted-foreground mt-2 text-xs">
-                Test couple, pet dog, and friendship variations to maximize
-                reach.
-              </p>
-
-              <ul className="text-muted-foreground mt-6 space-y-2.5 text-xs">
-                <li className="flex items-center gap-2">
-                  <Check className="h-3.5 w-3.5 shrink-0 text-rose-400" /> 3×
-                  25-Second 720P HD Videos
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-3.5 w-3.5 shrink-0 text-rose-400" />{' '}
-                  Priority GPU Render Queue
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-3.5 w-3.5 shrink-0 text-rose-400" /> Both
-                  9:16 and 16:9 Renders
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-3.5 w-3.5 shrink-0 text-rose-400" />{' '}
-                  Private Discord Prompt Guide
-                </li>
-              </ul>
-            </div>
-
-            <button
-              onClick={() =>
-                openCheckout({
-                  productId: 'zombie_bundle',
-                  name: 'Storyteller 3-Video Bundle',
-                  price: '$14.99',
-                  videos: '3 HD Videos ($4.99/ea)',
-                  discount: 'Save 30%',
-                })
-              }
-              className="mt-8 w-full cursor-pointer rounded-lg bg-rose-600 py-2.5 text-xs font-medium text-white shadow-md shadow-rose-950 transition-all hover:bg-rose-500"
-            >
-              Claim 3-Video Bundle ($14.99)
-            </button>
-          </div>
-
-          {/* Plan 3 */}
-          <div className="bg-card border-border flex flex-col justify-between rounded-2xl border p-7">
-            <div>
-              <span className="text-muted-foreground font-mono text-xs tracking-wider uppercase">
-                Creator Agency
-              </span>
-              <div className="mt-4 flex items-baseline gap-1">
-                <span className="text-foreground text-3xl font-bold">
-                  $29.99
-                </span>
-                <span className="text-muted-foreground text-xs">
-                  / 8 videos
-                </span>
-              </div>
-              <p className="text-muted-foreground mt-2 text-xs">
-                For creators running multiple accounts, client edits, or agency
-                campaigns.
-              </p>
-
-              <ul className="text-muted-foreground mt-6 space-y-2.5 text-xs">
-                <li className="flex items-center gap-2">
-                  <Check className="h-3.5 w-3.5 shrink-0 text-emerald-400" /> 8×
-                  25-Second 720P HD Videos
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-3.5 w-3.5 shrink-0 text-emerald-400" />{' '}
-                  Full Commercial Resell Rights
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-3.5 w-3.5 shrink-0 text-emerald-400" />{' '}
-                  Instant VIP Queue Priority
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-3.5 w-3.5 shrink-0 text-emerald-400" />{' '}
-                  Permanent Cloud Storage
-                </li>
-              </ul>
-            </div>
-
-            <button
-              onClick={() =>
-                openCheckout({
-                  productId: 'zombie_agency',
-                  name: 'Creator Agency Pass',
-                  price: '$29.99',
-                  videos: '8 HD Videos',
-                })
-              }
-              className="bg-surface-2 hover:bg-surface-3 border-border text-foreground mt-8 w-full cursor-pointer rounded-lg border py-2.5 text-xs font-medium transition-colors"
-            >
-              Get Creator Pass ($29.99)
-            </button>
+            <p className="text-muted-foreground mt-3 text-center text-[10px]">
+              No account required. Email optional for delivery.
+            </p>
           </div>
         </div>
       </section>
@@ -976,14 +831,13 @@ export function Hero() {
           <div className="bg-card border-border rounded-xl border p-5">
             <h3 className="text-foreground flex items-center gap-2 text-sm font-semibold">
               <HelpCircle className="h-4 w-4 text-rose-500" />
-              How does the Early Access purchase work?
+              How does a purchase work?
             </h3>
             <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
-              Our automated GPU generation queue is rolling out in cohorts.
-              Purchasing an Early Access pass guarantees your position at the
-              top of the queue with lifetime locked-in pricing ($6.99 vs public
-              launch price of $12.99). You will receive generation credits and
-              private order management via your account dashboard.
+              Upload two portraits, pick 9:16 or 16:9, and pay $4.99 once. After
+              payment is confirmed we generate your video and give you a private
+              order page with a 14-day download link. No account is required,
+              and an email is optional for delivery.
             </p>
           </div>
         </div>
