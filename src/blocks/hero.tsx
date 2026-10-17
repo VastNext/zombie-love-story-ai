@@ -25,14 +25,9 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { useSession } from '@/core/auth/client';
-import { Link, useRouter } from '@/core/i18n/navigation';
 import { apiPost } from '@/lib/api-client';
 
 export function Hero() {
-  const { data: session } = useSession();
-  const router = useRouter();
-
   const [photo1, setPhoto1] = useState<string | null>(null);
   const [photo2, setPhoto2] = useState<string | null>(null);
   const [photo1Name, setPhoto1Name] = useState<string>('');
@@ -55,6 +50,25 @@ export function Hero() {
     discount?: string;
   } | null>(null);
   const [isRedirectingToStripe, setIsRedirectingToStripe] = useState(false);
+  const [photo1File, setPhoto1File] = useState<File | null>(null);
+  const [photo2File, setPhoto2File] = useState<File | null>(null);
+  const [email, setEmail] = useState('');
+  const [testCode, setTestCode] = useState('');
+
+  // 服务端模式：admin_test 只对管理员开放测试生成；live 走 Stripe 收款
+  const [modeInfo, setModeInfo] = useState<{
+    mode: string;
+    canTest: boolean;
+    generationPaused: boolean;
+    priceCents: number;
+  } | null>(null);
+
+  React.useEffect(() => {
+    fetch('/api/zombie/mode')
+      .then((res) => res.json())
+      .then((json) => setModeInfo(json?.data ?? null))
+      .catch(() => setModeInfo(null));
+  }, []);
 
   const handleFileUpload = (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -67,9 +81,11 @@ export function Hero() {
         if (slot === 1) {
           setPhoto1(event.target?.result as string);
           setPhoto1Name(file.name);
+          setPhoto1File(file);
         } else {
           setPhoto2(event.target?.result as string);
           setPhoto2Name(file.name);
+          setPhoto2File(file);
         }
       };
       reader.readAsDataURL(file);
@@ -93,38 +109,88 @@ export function Hero() {
     setIsModalOpen(true);
   };
 
-  // Real Stripe Checkout Trigger
-  const handleStripeCheckout = async () => {
-    if (!selectedPlan) return;
+  /** 记住本浏览器的订单入口（无账号用户也能找回）。 */
+  const rememberOrder = (entry: {
+    orderId: string;
+    orderNo: string;
+    accessToken: string;
+  }) => {
+    try {
+      const raw = localStorage.getItem('zombie_orders');
+      const list = raw ? JSON.parse(raw) : [];
+      const next = [
+        entry,
+        ...list.filter((item: any) => item.orderId !== entry.orderId),
+      ].slice(0, 20);
+      localStorage.setItem('zombie_orders', JSON.stringify(next));
+    } catch {
+      // localStorage 不可用时忽略（用户仍可用复制出的私有链接）
+    }
+  };
 
-    // If not signed in, guide user to sign in first with return redirect
-    if (!session?.user) {
-      toast.info('Please sign in or create an account to secure your order.');
-      router.push(`/sign-in?redirect=/#pricing`);
+  const goToOrder = (orderId: string, accessToken: string) => {
+    window.location.href = `/zombie/order#o=${encodeURIComponent(
+      orderId
+    )}&t=${encodeURIComponent(accessToken)}`;
+  };
+
+  // 真实生成入口：上传两图 → 建订单 → 管理员测试授权 / Stripe 收款
+  const handleGenerate = async () => {
+    if (!photo1File || !photo2File) {
+      toast.error('Please upload both Photo 1 and Photo 2 to proceed.');
       return;
     }
 
     try {
       setIsRedirectingToStripe(true);
-      const res = await apiPost<{ url?: string; orderNo?: string }>(
-        '/api/payment/checkout',
-        {
-          product_id: selectedPlan.productId,
-          redirect: '/settings/payments',
-        }
-      );
+      const form = new FormData();
+      form.append('aspectRatio', aspectRatio);
+      if (email.trim()) form.append('email', email.trim());
+      form.append('photo1', photo1File);
+      form.append('photo2', photo2File);
 
-      if (res?.url) {
-        window.location.href = res.url;
-      } else {
-        toast.success('Order created successfully!');
-        router.push('/settings/payments');
+      const res = await fetch('/api/zombie/orders', {
+        method: 'POST',
+        body: form,
+      });
+      const json = await res.json();
+      if (json?.code !== 0 || !json?.data) {
+        throw new Error(json?.message || 'Could not create order');
       }
+
+      const { orderId, orderNo, accessToken } = json.data;
+      rememberOrder({ orderId, orderNo, accessToken });
+
+      // V1：管理员测试 —— 输入 Code 后跳过 Stripe 直接生成
+      if (modeInfo?.canTest) {
+        if (!testCode.trim()) {
+          toast.error('Enter the test code to start a test generation.');
+          return;
+        }
+        await apiPost('/api/zombie/admin-test', {
+          orderId,
+          code: testCode.trim(),
+        });
+        goToOrder(orderId, accessToken);
+        return;
+      }
+
+      // V2：正式收款
+      if (modeInfo?.mode === 'live') {
+        const result = await apiPost<{ checkoutUrl?: string }>(
+          '/api/zombie/checkout',
+          { orderId, accessToken }
+        );
+        if (result?.checkoutUrl) {
+          window.location.href = result.checkoutUrl;
+          return;
+        }
+        throw new Error('Could not start checkout');
+      }
+
+      toast.info('Coming soon — generation is not open yet.');
     } catch (err: any) {
-      toast.error(
-        err?.message ||
-          'Payment initiation failed. Please check Stripe configuration in admin panel.'
-      );
+      toast.error(err?.message || 'Generation could not be started.');
     } finally {
       setIsRedirectingToStripe(false);
     }
@@ -432,20 +498,12 @@ export function Hero() {
                   );
                   return;
                 }
-                openCheckout({
-                  productId: 'zombie_single',
-                  name:
-                    storyPreset === 'dog'
-                      ? 'Zombie Pet Pass (15s Video)'
-                      : 'Single Video Pass (25s Video)',
-                  price: '$6.99',
-                  videos: '1 HD Video',
-                });
+                setIsModalOpen(true);
               }}
               className="group flex w-full min-w-[320px] cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-rose-600 via-rose-500 to-amber-600 px-8 py-3.5 text-center text-xs font-semibold text-white shadow-lg shadow-rose-950/40 transition-all hover:from-rose-500 hover:to-amber-500 sm:w-auto sm:text-sm"
             >
               <Sparkles className="h-4 w-4 text-white" />
-              <span>Queue Up & Generate Video · $6.99</span>
+              <span>Generate Video · $4.99</span>
               <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </button>
             <div className="text-muted-foreground mt-3 flex items-center gap-4 text-[11px]">
@@ -921,12 +979,10 @@ export function Hero() {
                 </span>
                 <div>
                   <h3 className="text-foreground text-sm font-semibold">
-                    {selectedPlan ? selectedPlan.name : 'Early Access Pass'}
+                    Zombie Love Story · {aspectRatio}
                   </h3>
                   <p className="text-muted-foreground text-[11px]">
-                    {selectedPlan
-                      ? `${selectedPlan.price} · ${selectedPlan.videos}`
-                      : 'Secure your video generation pass'}
+                    $4.99 one-time · 1 video
                   </p>
                 </div>
               </div>
@@ -934,63 +990,82 @@ export function Hero() {
               <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-300">
                 <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                 <span className="text-[11px] leading-relaxed">
-                  <strong>Stripe Direct Checkout:</strong> You will be securely
-                  redirected to Stripe to complete payment. Order credits will
-                  be credited instantly upon payment confirmation.
+                  {modeInfo?.canTest ? (
+                    <>
+                      <strong>Test generation:</strong> no charge. Enter the
+                      test code to run a real generation on your account.
+                    </>
+                  ) : modeInfo?.mode === 'live' ? (
+                    <>
+                      <strong>One-time payment.</strong> You will be redirected
+                      to Stripe. Generation starts once payment is confirmed.
+                    </>
+                  ) : (
+                    <>
+                      <strong>Coming soon.</strong> Generation is not open to
+                      the public yet.
+                    </>
+                  )}
                 </span>
               </div>
 
-              {session?.user ? (
-                <div className="mt-5 space-y-4">
-                  <div className="bg-background border-border rounded-lg border p-3 text-xs">
-                    <span className="text-muted-foreground block text-[11px]">
-                      Purchasing as:
-                    </span>
-                    <strong className="text-foreground">
-                      {session.user.email}
-                    </strong>
-                  </div>
-
-                  <button
-                    onClick={handleStripeCheckout}
-                    disabled={isRedirectingToStripe}
-                    className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-rose-600 to-amber-600 py-2.5 text-xs font-semibold text-white shadow-md shadow-rose-950 transition-all hover:from-rose-500 hover:to-amber-500 disabled:opacity-50"
-                  >
-                    {isRedirectingToStripe ? (
-                      <>
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        <span>Redirecting to Stripe...</span>
-                      </>
-                    ) : (
-                      <>
-                        <LockIcon className="h-3.5 w-3.5" />
-                        <span>Pay {selectedPlan?.price} with Stripe</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              ) : (
-                <div className="mt-5 space-y-4">
-                  <p className="text-muted-foreground text-xs leading-relaxed">
-                    Please sign in or register to link your purchase and video
-                    delivery to your account.
+              <div className="mt-5 space-y-4">
+                <div>
+                  <label className="text-muted-foreground mb-1 block text-[11px]">
+                    Email (optional)
+                  </label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    className="bg-background border-border text-foreground w-full rounded-lg border px-3 py-2 text-xs outline-none focus:border-rose-500"
+                  />
+                  <p className="text-muted-foreground mt-1 text-[10px] leading-relaxed">
+                    Add an email to receive your private video link. Leave it
+                    blank and save the private link shown after checkout — this
+                    browser can reopen the order from My orders.
                   </p>
-                  <div className="flex gap-2">
-                    <Link
-                      href="/sign-in?redirect=/#pricing"
-                      className="flex-1 rounded-lg bg-rose-600 py-2 text-center text-xs font-medium text-white transition-colors hover:bg-rose-500"
-                    >
-                      Sign In to Buy
-                    </Link>
-                    <Link
-                      href="/sign-up?redirect=/#pricing"
-                      className="flex-1 rounded-lg border border-slate-700 bg-slate-800 py-2 text-center text-xs font-medium text-slate-200 transition-colors hover:bg-slate-700"
-                    >
-                      Register Account
-                    </Link>
-                  </div>
                 </div>
-              )}
+
+                {modeInfo?.canTest && (
+                  <div>
+                    <label className="text-muted-foreground mb-1 block text-[11px]">
+                      Test code
+                    </label>
+                    <input
+                      type="text"
+                      value={testCode}
+                      onChange={(e) => setTestCode(e.target.value)}
+                      placeholder="Test code"
+                      className="bg-background border-border text-foreground w-full rounded-lg border px-3 py-2 text-xs outline-none focus:border-rose-500"
+                    />
+                  </div>
+                )}
+
+                <button
+                  onClick={handleGenerate}
+                  disabled={isRedirectingToStripe}
+                  className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-rose-600 to-amber-600 py-2.5 text-xs font-semibold text-white shadow-md shadow-rose-950 transition-all hover:from-rose-500 hover:to-amber-500 disabled:opacity-50"
+                >
+                  {isRedirectingToStripe ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <span>Working…</span>
+                    </>
+                  ) : modeInfo?.canTest ? (
+                    <>
+                      <Sparkles className="h-3.5 w-3.5" />
+                      <span>Start test generation</span>
+                    </>
+                  ) : (
+                    <>
+                      <LockIcon className="h-3.5 w-3.5" />
+                      <span>Pay $4.99 with Stripe</span>
+                    </>
+                  )}
+                </button>
+              </div>
 
               <p className="text-muted-foreground mt-3 text-center font-mono text-[10px]">
                 Secured by Stripe & 256-bit SSL encryption
