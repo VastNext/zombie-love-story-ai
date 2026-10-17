@@ -647,6 +647,7 @@ export const zombieOrder = table(
     id: text('id').primaryKey(),
     orderNo: text('order_no').notNull().unique(),
     accessTokenHash: text('access_token_hash').notNull(),
+    deliveryTokenEnc: text('delivery_token_enc'),
     source: text('source').notNull(),
     createdByUserId: text('created_by_user_id'),
     status: text('status').notNull(),

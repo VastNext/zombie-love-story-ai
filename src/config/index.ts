@@ -90,6 +90,25 @@ export const envConfigs: Record<string, string> = {
   // under AI → Chat Model, the image model from the composer's catalog, and
   // the credit price with it. Nothing about it belongs in env.
 
+  // Zombie Love Story — SeeAPI 生成（服务端专用，浏览器解析为 ''）
+  see_api_key: procEnv.SEE_API_KEY ?? '',
+  see_api_base_url: procEnv.SEE_API_BASE_URL ?? '',
+
+  // Zombie Love Story — 上线模式与管理员测试门槛
+  // admin_test：普通访客不可购买；仅管理员可用 Code 触发真实生成
+  // live：正式收款（Stripe）
+  zombie_mvp_mode: procEnv.ZOMBIE_MVP_MODE ?? 'admin_test',
+  zombie_admin_test_code: procEnv.ZOMBIE_ADMIN_TEST_CODE ?? 'FountainChan',
+  zombie_admin_test_user_limit: procEnv.ZOMBIE_ADMIN_TEST_USER_LIMIT ?? '3',
+  zombie_admin_test_global_limit:
+    procEnv.ZOMBIE_ADMIN_TEST_GLOBAL_LIMIT ?? '10',
+  zombie_generation_paused: procEnv.ZOMBIE_GENERATION_PAUSED ?? 'false',
+
+  // Zombie Love Story — 视频模型规格（验证后可改，不必动路由）
+  zombie_video_model: procEnv.ZOMBIE_VIDEO_MODEL ?? '',
+  zombie_video_provider: procEnv.ZOMBIE_VIDEO_PROVIDER ?? '',
+  zombie_video_duration_seconds: procEnv.ZOMBIE_VIDEO_DURATION_SECONDS ?? '',
+
   // Locale (public)
   locale: publicEnv('VITE_DEFAULT_LOCALE') ?? 'en',
 };

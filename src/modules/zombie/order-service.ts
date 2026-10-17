@@ -9,6 +9,7 @@ import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import { db as defaultDb } from '@/core/db';
 import { zombieOrder } from '@/config/db/schema';
+import { decryptSecret, encryptSecret } from '@/lib/crypto';
 
 import {
   generateAccessToken,
@@ -67,6 +68,10 @@ export function createOrderService(deps: ZombieOrderDeps = {}) {
     const accessTokenHash = await hashAccessToken(accessToken);
     const id = generateOrderId();
     const orderNo = generateOrderNo();
+    // 仅当用户留下邮箱时才保留可解密副本，用于事后发送领取链接。
+    const deliveryTokenEnc = input.notifyEmail
+      ? await encryptSecret(accessToken)
+      : null;
 
     const rows = await database()
       .insert(zombieOrder)
@@ -74,6 +79,7 @@ export function createOrderService(deps: ZombieOrderDeps = {}) {
         id,
         orderNo,
         accessTokenHash,
+        deliveryTokenEnc,
         source: input.source,
         createdByUserId: input.createdByUserId ?? null,
         status: 'draft',
@@ -107,6 +113,12 @@ export function createOrderService(deps: ZombieOrderDeps = {}) {
       .where(eq(zombieOrder.stripeSessionId, sessionId))
       .limit(1);
     return rows[0] ?? null;
+  }
+
+  /** 解密领取令牌，用于发送邮件链接；无邮箱或无副本时返回 null。 */
+  async function getDeliveryToken(order: any): Promise<string | null> {
+    if (!order?.deliveryTokenEnc) return null;
+    return decryptSecret(order.deliveryTokenEnc);
   }
 
   /** 校验访问令牌是否与订单匹配。 */
@@ -225,6 +237,8 @@ export function createOrderService(deps: ZombieOrderDeps = {}) {
     }
   ): Promise<any | null> {
     const now = clock();
+    const current = await getOrderById(orderId);
+    const hasEmail = Boolean(current?.notifyEmail);
     return updateStatus(
       orderId,
       'succeeded',
@@ -237,6 +251,9 @@ export function createOrderService(deps: ZombieOrderDeps = {}) {
         leaseOwner: null,
         leaseUntil: null,
         nextAttemptAt: null,
+        // 有邮箱才排队通知；无邮箱标记为 skipped，绝不假装已通知
+        notifyStatus: hasEmail ? 'pending' : 'skipped',
+        notifyNextAt: hasEmail ? now : null,
       },
       { force: true }
     );
@@ -275,6 +292,7 @@ export function createOrderService(deps: ZombieOrderDeps = {}) {
     createDraft,
     getOrderById,
     getByStripeSession,
+    getDeliveryToken,
     verifyAccess,
     attachPhotos,
     updateStatus,

@@ -95,6 +95,68 @@ export class R2Provider implements StorageProvider {
     }
   };
 
+  /**
+   * 私有对象的短时效签名 GET URL（S3 预签名）。
+   * 付费成片/原始肖像走这里，避免公开可猜链接。
+   */
+  getPresignedGetUrl = async (options: {
+    key: string;
+    bucket?: string;
+    expiresIn?: number;
+  }): Promise<string> => {
+    const uploadBucket = options.bucket || this.configs.bucket;
+    if (!uploadBucket) throw new Error('Bucket is required');
+    const uploadPath = this.getUploadPath();
+    // 预置 X-Amz-Expires：aws4fetch 的 signQuery 会保留它并纳入签名
+    const url = new URL(
+      `${this.getEndpoint()}/${uploadBucket}/${uploadPath}/${options.key}`
+    );
+    url.searchParams.set('X-Amz-Expires', String(options.expiresIn ?? 3600));
+
+    const { AwsClient } = await import('aws4fetch');
+    const client = new AwsClient({
+      accessKeyId: this.configs.accessKeyId,
+      secretAccessKey: this.configs.secretAccessKey,
+      region: this.configs.region || 'auto',
+      service: 's3',
+    });
+
+    const signed = await client.sign(
+      new Request(url.toString(), { method: 'GET' }),
+      {
+        aws: { signQuery: true },
+      }
+    );
+    return signed.url;
+  };
+
+  /** 删除对象（用于原始肖像到期清理）。 */
+  deleteFile = async (options: {
+    key: string;
+    bucket?: string;
+  }): Promise<boolean> => {
+    try {
+      const uploadBucket = options.bucket || this.configs.bucket;
+      if (!uploadBucket) return false;
+      const uploadPath = this.getUploadPath();
+      const url = `${this.getEndpoint()}/${uploadBucket}/${uploadPath}/${options.key}`;
+
+      const { AwsClient } = await import('aws4fetch');
+      const client = new AwsClient({
+        accessKeyId: this.configs.accessKeyId,
+        secretAccessKey: this.configs.secretAccessKey,
+        region: this.configs.region || 'auto',
+      });
+
+      const response = await client.fetch(
+        new Request(url, { method: 'DELETE' })
+      );
+      return response.ok;
+    } catch {
+      return false;
+    }
+  };
+
   async uploadFile(
     options: StorageUploadOptions
   ): Promise<StorageUploadResult> {

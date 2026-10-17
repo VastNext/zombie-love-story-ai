@@ -714,6 +714,8 @@ export const zombieOrder = table(
     orderNo: text('order_no').notNull().unique(),
     // 高熵访问令牌的 sha256 十六进制；原始令牌从不落库
     accessTokenHash: text('access_token_hash').notNull(),
+    // 仅当用户提供邮箱时，保存可解密（AES-GCM）的令牌副本，用于事后发送领取邮件
+    deliveryTokenEnc: text('delivery_token_enc'),
     // 'admin_test' | 'stripe'
     source: text('source').notNull(),
     // 管理员测试的来源账号，用于按人计数
