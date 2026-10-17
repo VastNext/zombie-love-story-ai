@@ -20,7 +20,11 @@ import { createOrderService, getOrderService } from './order-service';
 import { createRetention } from './retention';
 import { getSeeApiClient, type SeeApiClient } from './seeapi';
 import { getZombieStorage, type ZombieStorage } from './storage';
-import { DEFAULT_VIDEO_SPEC, type VideoModelSpec } from './video-spec';
+import {
+  DEFAULT_VIDEO_SPEC,
+  resolveVideoSpecFor,
+  type VideoModelSpec,
+} from './video-spec';
 import { createWorker } from './worker';
 
 export interface ZombieRuntime {
@@ -38,18 +42,39 @@ export interface ZombieRuntime {
   retention: ReturnType<typeof createRetention> | null;
 }
 
-/** 环境变量覆盖默认视频规格（验证后改环境变量即可，不必改代码）。 */
+/**
+ * 环境变量覆盖默认视频规格（验证后改环境变量即可，不必改代码）。
+ *
+ * ZOMBIE_VIDEO_MODEL 必须是 video-spec 注册表里的 id；未知值会回退默认并告警，
+ * 避免把「模型名写错」变成线上静默走错模型。
+ */
 export function resolveVideoSpec(): VideoModelSpec {
-  const spec: VideoModelSpec = { ...DEFAULT_VIDEO_SPEC };
-  if (envConfigs.zombie_video_model) spec.model = envConfigs.zombie_video_model;
+  const requested = envConfigs.zombie_video_model;
+  let spec: VideoModelSpec = DEFAULT_VIDEO_SPEC;
+
+  if (requested) {
+    const found = resolveVideoSpecFor(requested);
+    if (found) {
+      spec = found;
+    } else {
+      console.warn(
+        `[zombie] ZOMBIE_VIDEO_MODEL=${requested} 不在注册表中，回退默认 ${DEFAULT_VIDEO_SPEC.model}`
+      );
+    }
+  }
+
+  const resolved: VideoModelSpec = { ...spec };
   if (envConfigs.zombie_video_provider) {
-    spec.provider = envConfigs.zombie_video_provider;
+    resolved.provider = envConfigs.zombie_video_provider;
   }
   const duration = Number(envConfigs.zombie_video_duration_seconds);
   if (Number.isFinite(duration) && duration > 0) {
-    spec.durationSeconds = duration;
+    resolved.durationSeconds = duration;
   }
-  return spec;
+  if (envConfigs.zombie_video_resolution) {
+    resolved.resolution = envConfigs.zombie_video_resolution;
+  }
+  return resolved;
 }
 
 /** 轻量模式信息：不做存储/SeeAPI 初始化，供模式查询接口使用。 */

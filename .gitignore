@@ -69,3 +69,6 @@ package-lock.json
 
 .vercel
 .env*
+
+# 本地样片测试产物（scripts/try-seeapi.ts）
+_local-tests/
