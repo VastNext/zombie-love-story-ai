@@ -2,7 +2,15 @@ import { createFileRoute } from '@tanstack/react-router';
 
 import { getZombieRuntime } from '@/modules/zombie/runtime';
 import { verifyStripeWebhook } from '@/modules/zombie/stripe';
-import { respErr, respOk } from '@/lib/resp';
+import { respOk } from '@/lib/resp';
+
+/**
+ * Stripe 依赖非 2xx 才会重试。任何处理失败都必须回 5xx，
+ * 否则一次数据库抖动就会静默丢单。
+ */
+function fail(message: string, status: number) {
+  return Response.json({ error: message }, { status });
+}
 
 /**
  * Stripe webhook（仅处理 Zombie 订单）。
@@ -16,7 +24,8 @@ async function POST({ request }: { request: Request }) {
     const signature = request.headers.get('stripe-signature');
 
     const event = await verifyStripeWebhook(rawBody, signature);
-    if (!event) return respErr('Invalid signature');
+    // 签名不对：请求本身无效，用 400 而不是 200（也不要 5xx，免得无意义重试）
+    if (!event) return fail('Invalid signature', 400);
 
     const runtime = await getZombieRuntime();
     const svc = runtime.orderService;
@@ -82,8 +91,8 @@ async function POST({ request }: { request: Request }) {
     return respOk();
   } catch (error: any) {
     console.error('[zombie] stripe webhook failed', error);
-    // 返回非 2xx 让 Stripe 重试
-    return respErr(error?.message || 'Webhook handling failed');
+    // 返回 5xx 让 Stripe 重试，避免丢单
+    return fail(error?.message || 'Webhook handling failed', 500);
   }
 }
 

@@ -2,7 +2,12 @@ import { createFileRoute } from '@tanstack/react-router';
 
 import { envConfigs } from '@/config';
 import { getZombieRuntime } from '@/modules/zombie/runtime';
-import { respData, respErr } from '@/lib/resp';
+import { respData } from '@/lib/resp';
+
+/** 机器对机器端点：必须用真实 HTTP 状态码，不能沿用 respErr 的 200 约定。 */
+function fail(message: string, status: number) {
+  return Response.json({ error: message }, { status });
+}
 
 /**
  * 定时任务入口：推进生成、发送通知、清理过期肖像。
@@ -20,7 +25,7 @@ function isAuthorized(request: Request): boolean {
 }
 
 async function GET({ request }: { request: Request }) {
-  if (!isAuthorized(request)) return respErr('Forbidden');
+  if (!isAuthorized(request)) return fail('Forbidden', 403);
 
   try {
     const runtime = await getZombieRuntime();
@@ -46,7 +51,7 @@ async function GET({ request }: { request: Request }) {
     });
   } catch (error: any) {
     console.error('[zombie] jobs failed', error);
-    return respErr(error?.message || '任务执行失败');
+    return fail(error?.message || '任务执行失败', 500);
   }
 }
 
