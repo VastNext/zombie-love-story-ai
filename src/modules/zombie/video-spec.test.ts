@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -7,9 +8,20 @@ import {
   listVideoModels,
   pickVideoAsset,
   resolveVideoSpecFor,
+  ZOMBIE_STORY_PROMPT,
 } from './video-spec';
 
 describe('buildGenerationInput', () => {
+  it('默认请求逐字使用获批的完整分镜提示词', () => {
+    expect(createHash('sha256').update(ZOMBIE_STORY_PROMPT).digest('hex')).toBe(
+      '5dffeb4fb2fe50127c97b667cc3cef482d90c9728b8b967ec9ff5e76636922e2'
+    );
+    const request = buildGenerationRequest(DEFAULT_VIDEO_SPEC, {
+      photoUrls: ['a', 'b'],
+      aspectRatio: '9:16',
+    });
+    expect(request.input.prompt).toBe(ZOMBIE_STORY_PROMPT);
+  });
   it('maps photo 1 to the first frame and photo 2 to the last frame', () => {
     const input = buildGenerationInput(DEFAULT_VIDEO_SPEC, {
       photoUrls: ['https://x/one.jpg', 'https://x/two.jpg'],

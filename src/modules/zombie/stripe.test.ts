@@ -73,6 +73,16 @@ describe('Stripe 正式切换保护', () => {
     );
   });
 
+  it.each([990, 499])(
+    '收银台按订单金额 %i 美分创建，不套用当前售价',
+    async (priceCents) => {
+      await createZombieCheckoutSession({ ...args, priceCents });
+      expect(create.mock.calls[0][0].line_items[0].price_data.unit_amount).toBe(
+        priceCents
+      );
+    }
+  );
+
   it('切换后旧沙盒签名仍可验证，但不能签署正式事件', async () => {
     env.stripe_sandbox_signing_secret = 'whsec_old_fixture';
     const stripe = new Stripe('sk_test_fixture');

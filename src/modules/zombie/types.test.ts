@@ -4,11 +4,17 @@ import {
   canTransition,
   DOWNLOAD_WINDOW_DAYS,
   downloadExpireAt,
+  formatZombiePrice,
   isAspectRatio,
   isTerminalStatus,
   isWithinDownloadWindow,
   MS_PER_DAY,
 } from './types';
+
+it('统一格式化新售价与旧订单金额', () => {
+  expect(formatZombiePrice()).toBe('$9.90');
+  expect(formatZombiePrice(499)).toBe('$4.99');
+});
 
 describe('canTransition', () => {
   it('allows the documented happy path', () => {

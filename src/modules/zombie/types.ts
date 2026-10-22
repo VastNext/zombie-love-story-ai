@@ -105,7 +105,11 @@ export const PHOTO_RETENTION_AFTER_SUCCESS_MS = MS_PER_DAY;
 export const PHOTO_RETENTION_FAILED_MS = 7 * MS_PER_DAY;
 
 /** 单条视频固定售价（美分）。 */
-export const ZOMBIE_PRICE_CENTS = 499;
+export const ZOMBIE_PRICE_CENTS = 990;
+
+export function formatZombiePrice(priceCents = ZOMBIE_PRICE_CENTS): string {
+  return `$${(priceCents / 100).toFixed(2)}`;
+}
 export const ZOMBIE_CURRENCY = 'usd';
 export const ZOMBIE_PRODUCT_ID = 'zombie_single';
 

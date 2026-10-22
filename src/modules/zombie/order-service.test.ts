@@ -3,6 +3,7 @@ import { drizzle } from 'drizzle-orm/libsql';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { createOrderService } from './order-service';
+import { ZOMBIE_PRICE_CENTS } from './types';
 
 /**
  * 集成测试：内存 libsql + 真实 drizzle，验证订单服务的关键不变量。
@@ -75,6 +76,24 @@ describe('order service (integration, in-memory libsql)', () => {
   function svc() {
     return createOrderService({ db, clock });
   }
+
+  it('新订单保存 990 美分，499 美分旧订单付款后保持原价', async () => {
+    const service = svc();
+    const { order: oldOrder } = await service.createDraft({
+      aspectRatio: '9:16',
+      source: 'stripe',
+      priceCents: 499,
+    });
+    const { order: newOrder } = await service.createDraft({
+      aspectRatio: '9:16',
+      source: 'stripe',
+      priceCents: ZOMBIE_PRICE_CENTS,
+    });
+    expect(newOrder.priceCents).toBe(990);
+    await service.markCheckoutPending(oldOrder.id, 'cs_old_price');
+    await service.markPaidBySession('cs_old_price');
+    expect((await service.getOrderById(oldOrder.id)).priceCents).toBe(499);
+  });
 
   it('重复关联同一结账会话幂等，付款后不能退回待付款', async () => {
     const service = svc();

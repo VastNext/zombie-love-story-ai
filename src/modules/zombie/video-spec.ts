@@ -36,11 +36,9 @@ export interface VideoModelSpec {
 }
 
 /** 固定故事提示词：幸存者 → 感染者 → 拥抱 → 温暖回忆，无血腥。 */
-export const ZOMBIE_STORY_PROMPT =
-  'Cinematic post-apocalyptic scene. A survivor lowers a raised weapon, ' +
-  'arms open, and steps toward their infected partner. The two embrace ' +
-  'as the frame hard match-cuts into a warm, sunlit memory of them ' +
-  'together. No gore, no blood. Emotional, filmic lighting, gentle camera move.';
+export const ZOMBIE_STORY_PROMPT = `[SHOT 1 - Post-Apocalyptic Ruins (0-10s)]: Cold volumetric blue light through shattered concrete window. Subject 1 (survivor) aims weapon with trembling hands, crying. Subject 2 approaches with milky pale eyes, dark veins, torn clothing, walking with unstable zombie gait. At 7s, Subject 1 lowers the weapon and steps forward with wide open arms. Subject 2 lunges forward into an embrace. Right at 10.0s as their shoulders collide and hands grasp each other:
+[MATCH-CUT at 10.0s]: Seamless hard transition preserving exact physical momentum and contact point into:
+[SHOT 2 - Radiant Golden Meadow (10-25s)]: Warm sunset lighting over alpine wildflower meadow. Both subjects are 100% healthy, smiling through joyful tears, spinning in a tight emotional hug. 720p/1080p, natural ambient wind and footsteps audio, cinematic 35mm lens.`;
 
 /**
  * 已知模型规格表。键为 SeeAPI 的 model id。

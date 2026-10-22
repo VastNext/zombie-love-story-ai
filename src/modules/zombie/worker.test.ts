@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { DEFAULT_VIDEO_SPEC } from './video-spec';
+import { DEFAULT_VIDEO_SPEC, ZOMBIE_STORY_PROMPT } from './video-spec';
 import { backoffMs, createWorker } from './worker';
 
 const NOW = new Date('2026-05-01T00:00:00Z');
@@ -106,6 +106,7 @@ describe('worker step — submission', () => {
     const { worker, seeapi } = makeHarness(order, { ok: true, taskId: 't' });
     await worker.step(order);
     const input = seeapi.createGeneration.mock.calls[0][0].input;
+    expect(input.prompt).toBe(ZOMBIE_STORY_PROMPT);
     expect(input.first_frame_image).toContain('photo1');
     expect(input.last_frame_image).toContain('photo2');
   });

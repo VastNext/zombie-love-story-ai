@@ -26,6 +26,8 @@ import {
 import { toast } from 'sonner';
 
 import { envConfigs } from '@/config';
+import { formatZombiePrice } from '@/modules/zombie/types';
+import { ZOMBIE_STORY_PROMPT } from '@/modules/zombie/video-spec';
 import { apiPost } from '@/lib/api-client';
 
 export function Hero() {
@@ -57,6 +59,8 @@ export function Hero() {
     generationPaused: boolean;
     priceCents: number;
   } | null>(null);
+
+  const price = formatZombiePrice(modeInfo?.priceCents);
 
   React.useEffect(() => {
     fetch('/api/zombie/mode')
@@ -251,9 +255,7 @@ export function Hero() {
       targetTools: 'Luma Dream Machine, Kling 1.5, Runway Gen-3, Sora',
       description:
         'Survivor lowers defense in a ruined shelter; infected lover lunges; instantaneous match cut at the collision frame into a sunlit meadow.',
-      prompt: `[SHOT 1 - Post-Apocalyptic Ruins (0-10s)]: Cold volumetric blue light through shattered concrete window. Subject 1 (survivor) aims weapon with trembling hands, crying. Subject 2 approaches with milky pale eyes, dark veins, torn clothing, walking with unstable zombie gait. At 7s, Subject 1 lowers the weapon and steps forward with wide open arms. Subject 2 lunges forward into an embrace. Right at 10.0s as their shoulders collide and hands grasp each other:
-[MATCH-CUT at 10.0s]: Seamless hard transition preserving exact physical momentum and contact point into:
-[SHOT 2 - Radiant Golden Meadow (10-25s)]: Warm sunset lighting over alpine wildflower meadow. Both subjects are 100% healthy, smiling through joyful tears, spinning in a tight emotional hug. 720p/1080p, natural ambient wind and footsteps audio, cinematic 35mm lens.`,
+      prompt: ZOMBIE_STORY_PROMPT,
     },
     {
       keyword: 'zombie dog trend / zombie pet ai video',
@@ -286,7 +288,7 @@ export function Hero() {
         <span className="h-1.5 w-1.5 animate-ping rounded-full bg-rose-500" />
         <span>
           Two portraits in, one cinematic match-cut out. One-time{' '}
-          <strong className="font-semibold text-rose-400">$4.99</strong> per
+          <strong className="font-semibold text-rose-400">{price}</strong> per
           video.
         </span>
       </div>
@@ -325,7 +327,7 @@ export function Hero() {
             <Video className="h-3.5 w-3.5 text-cyan-400" /> 9:16 & 16:9 Formats
           </span>
           <span className="bg-surface-1 border-border flex items-center gap-1.5 rounded border px-3 py-1">
-            <CreditCard className="h-3.5 w-3.5 text-emerald-400" /> $4.99
+            <CreditCard className="h-3.5 w-3.5 text-emerald-400" /> {price}
             One-Time (No Sub)
           </span>
         </div>
@@ -531,8 +533,8 @@ export function Hero() {
               <Sparkles className="h-4 w-4 text-white" />
               <span>
                 {modeInfo?.mode === 'stripe_sandbox' && modeInfo.canCheckout
-                  ? 'Test payment · $4.99 (sandbox)'
-                  : 'Generate Video · $4.99'}
+                  ? `Test payment · ${price} (sandbox)`
+                  : `Generate Video · ${price}`}
               </span>
               <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </button>
@@ -782,7 +784,9 @@ export function Hero() {
               Single Video
             </span>
             <div className="mt-4 flex items-baseline gap-1">
-              <span className="text-foreground text-4xl font-bold">$4.99</span>
+              <span className="text-foreground text-4xl font-bold">
+                {price}
+              </span>
               <span className="text-muted-foreground text-xs">/ one-time</span>
             </div>
             <p className="text-muted-foreground mt-2 text-xs">
@@ -821,7 +825,7 @@ export function Hero() {
             >
               {modeInfo?.mode === 'stripe_sandbox' && modeInfo.canCheckout
                 ? 'Test payment (sandbox)'
-                : 'Generate my video · $4.99'}
+                : `Generate my video · ${price}`}
             </button>
             <p className="text-muted-foreground mt-3 text-center text-[10px]">
               No account required. Email optional for delivery.
@@ -892,10 +896,10 @@ export function Hero() {
               How does a purchase work?
             </h3>
             <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
-              Upload two portraits, pick 9:16 or 16:9, and pay $4.99 once. After
-              payment is confirmed we generate your video and give you a private
-              order page with a 14-day download link. No account is required,
-              and an email is optional for delivery.
+              Upload two portraits, pick 9:16 or 16:9, and pay {price} once.
+              After payment is confirmed we generate your video and give you a
+              private order page with a 14-day download link. No account is
+              required, and an email is optional for delivery.
             </p>
           </div>
         </div>
@@ -922,7 +926,7 @@ export function Hero() {
                     Zombie Love Story · {aspectRatio}
                   </h3>
                   <p className="text-muted-foreground text-[11px]">
-                    $4.99 one-time · 1 video
+                    {price} one-time · 1 video
                   </p>
                 </div>
               </div>
@@ -1015,7 +1019,7 @@ export function Hero() {
                   ) : (
                     <>
                       <LockIcon className="h-3.5 w-3.5" />
-                      <span>Pay $4.99 with Stripe</span>
+                      <span>Pay {price} with Stripe</span>
                     </>
                   )}
                 </button>
