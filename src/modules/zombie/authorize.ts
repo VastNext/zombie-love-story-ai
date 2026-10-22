@@ -5,10 +5,32 @@
  * 是否放行完全由「管理员身份 + 模式 + 暂停开关 + 配额」决定。
  */
 
-export type ZombieMode = 'admin_test' | 'live';
+export type ZombieMode = 'admin_test' | 'stripe_sandbox' | 'live';
 
 export function parseMode(value: unknown): ZombieMode {
-  return value === 'live' ? 'live' : 'admin_test';
+  return value === 'live' || value === 'stripe_sandbox' ? value : 'admin_test';
+}
+
+export function canCreateZombieOrder(
+  mode: ZombieMode,
+  isAdmin: boolean
+): boolean {
+  return mode === 'live' || isAdmin;
+}
+
+export function canCheckoutZombieOrder(
+  mode: ZombieMode,
+  isAdmin: boolean,
+  source: string,
+  ownerId: string | null,
+  userId: string | null
+): boolean {
+  if (mode === 'stripe_sandbox') {
+    return (
+      isAdmin && source === 'stripe_sandbox' && !!userId && ownerId === userId
+    );
+  }
+  return mode === 'live' && source === 'stripe';
 }
 
 export function parsePaused(value: unknown): boolean {

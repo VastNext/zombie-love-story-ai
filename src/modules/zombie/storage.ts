@@ -18,6 +18,9 @@ export interface ZombieStorage {
   /** 生成 SeeAPI / 用户可拉取的读取 URL。 */
   getReadUrl(key: string, expiresInSeconds?: number): Promise<string>;
   deleteObject(key: string): Promise<boolean>;
+  getUploadUrl?(key: string, type: string, size: number): Promise<string>;
+  getObjectInfo?(key: string): Promise<{ size: number; type: string } | null>;
+  getObjectHeader?(key: string): Promise<Uint8Array>;
 }
 
 export function wrapStorage(manager: StorageManager): ZombieStorage {
@@ -48,6 +51,17 @@ export function wrapStorage(manager: StorageManager): ZombieStorage {
 
     async deleteObject(key) {
       return manager.deleteFile({ key });
+    },
+    async getUploadUrl(key, type, size) {
+      const url = await manager.getPresignedPutUrl(key, type, size);
+      if (!url) throw new Error('未配置 R2 原图直传');
+      return url;
+    },
+    async getObjectInfo(key) {
+      return manager.getObjectInfo(key);
+    },
+    async getObjectHeader(key) {
+      return manager.getObjectHeader(key);
     },
   };
 }

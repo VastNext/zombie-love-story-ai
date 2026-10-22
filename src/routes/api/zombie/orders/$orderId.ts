@@ -25,6 +25,7 @@ function publicView(order: any) {
   return {
     orderNo: order.orderNo,
     status: order.status,
+    sandbox: order.source === 'stripe_sandbox',
     aspectRatio: order.aspectRatio,
     priceCents: order.priceCents,
     currency: order.currency,

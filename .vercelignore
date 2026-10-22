@@ -1,0 +1,8 @@
+.env*
+!.env.example
+data/
+photo/
+_local-tests/
+.output/
+.nitro/
+tsconfig.tsbuildinfo

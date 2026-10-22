@@ -8,7 +8,7 @@
  *   绝不因本地等待超时而新建任务。
  */
 
-import { and, eq, inArray, isNull, lt, lte, or } from 'drizzle-orm';
+import { and, eq, inArray, isNull, lt, lte, ne, or } from 'drizzle-orm';
 
 import { db as defaultDb } from '@/core/db';
 import { zombieOrder } from '@/config/db/schema';
@@ -73,6 +73,7 @@ export function createWorker(deps: WorkerDeps) {
       .where(
         and(
           eq(zombieOrder.id, orderId),
+          ne(zombieOrder.source, 'stripe_sandbox'),
           or(isNull(zombieOrder.leaseUntil), lt(zombieOrder.leaseUntil, now))
         )
       )
@@ -88,6 +89,8 @@ export function createWorker(deps: WorkerDeps) {
       .where(
         and(
           inArray(zombieOrder.status, WORKABLE_STATUSES),
+          // 沙盒付款不授权真实生成，即使之后切回 live 也不能捞起。
+          ne(zombieOrder.source, 'stripe_sandbox'),
           or(
             isNull(zombieOrder.nextAttemptAt),
             lte(zombieOrder.nextAttemptAt, now)
@@ -111,6 +114,7 @@ export function createWorker(deps: WorkerDeps) {
 
   /** 处理单个订单一步。 */
   async function step(order: any): Promise<void> {
+    if (order.source === 'stripe_sandbox') return;
     const svc = deps.orderService;
 
     // paid → queued（授权生成）

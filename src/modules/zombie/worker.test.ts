@@ -61,6 +61,16 @@ describe('backoffMs', () => {
 });
 
 describe('worker step — submission', () => {
+  it('never submits a sandbox payment for generation', async () => {
+    const order = makeOrder({ status: 'paid', source: 'stripe_sandbox' });
+    const { worker, seeapi, updates } = makeHarness(order, {
+      ok: true,
+      taskId: 't',
+    });
+    await worker.step(order);
+    expect(seeapi.createGeneration).not.toHaveBeenCalled();
+    expect(updates).toEqual([]);
+  });
   it('advances a paid order to queued and submits within the same tick', async () => {
     const order = makeOrder({ status: 'paid' });
     const { worker, seeapi, updates } = makeHarness(order, {

@@ -38,6 +38,8 @@ export const envConfigs: Record<string, string> = {
   stripe_secret_key: procEnv.STRIPE_SECRET_KEY ?? '',
   stripe_publishable_key: procEnv.STRIPE_PUBLISHABLE_KEY ?? '',
   stripe_signing_secret: procEnv.STRIPE_SIGNING_SECRET ?? '',
+  stripe_sandbox_signing_secret: procEnv.STRIPE_SANDBOX_SIGNING_SECRET ?? '',
+  stripe_live_signing_secret: procEnv.STRIPE_LIVE_SIGNING_SECRET ?? '',
 
   // Payment - PayPal
   paypal_client_id: procEnv.PAYPAL_CLIENT_ID ?? '',
@@ -114,8 +116,8 @@ export const envConfigs: Record<string, string> = {
   zombie_admin_test_global_limit:
     procEnv.ZOMBIE_ADMIN_TEST_GLOBAL_LIMIT ?? '10',
   zombie_generation_paused: procEnv.ZOMBIE_GENERATION_PAUSED ?? 'false',
-  // cron/内部任务端点的一次性校验密钥（Vercel Cron 会带 x-vercel-cron 头）
-  zombie_cron_secret: procEnv.ZOMBIE_CRON_SECRET ?? '',
+  // Vercel Cron 自动发送 CRON_SECRET 对应的 Bearer 凭证。
+  zombie_cron_secret: procEnv.CRON_SECRET ?? procEnv.ZOMBIE_CRON_SECRET ?? '',
 
   // Zombie Love Story — 视频模型规格（验证后可改，不必动路由）
   zombie_video_model: procEnv.ZOMBIE_VIDEO_MODEL ?? '',

@@ -11,6 +11,7 @@ import { createFileRoute } from '@tanstack/react-router';
 interface OrderView {
   orderNo: string;
   status: string;
+  sandbox: boolean;
   aspectRatio: string;
   priceCents: number;
   currency: string;
@@ -39,7 +40,20 @@ const STATUS_LABEL: Record<string, string> = {
 function readFragment(): { o: string; t: string } {
   if (typeof window === 'undefined') return { o: '', t: '' };
   const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-  return { o: params.get('o') ?? '', t: params.get('t') ?? '' };
+  const o = params.get('o') ?? '';
+  let t = params.get('t') ?? '';
+  if (o && !t) {
+    try {
+      const saved = JSON.parse(localStorage.getItem('zombie_orders') || '[]');
+      t =
+        saved.find(
+          (item: { orderId: string; accessToken: string }) => item.orderId === o
+        )?.accessToken ?? '';
+    } catch {
+      // 浏览器未保存订单时仍允许展示链接不完整的提示。
+    }
+  }
+  return { o, t };
 }
 
 function MyOrders() {
@@ -117,7 +131,7 @@ function OrderPage() {
 
   // 生成中时轮询；完成或失败后停止
   React.useEffect(() => {
-    if (!order) return;
+    if (!order || (order.sandbox && order.status === 'paid')) return;
     const active = [
       'draft',
       'checkout_pending',
@@ -133,7 +147,9 @@ function OrderPage() {
 
   const copyLink = async () => {
     try {
-      await navigator.clipboard.writeText(window.location.href);
+      await navigator.clipboard.writeText(
+        `${window.location.origin}/zombie/order#o=${encodeURIComponent(orderId)}&t=${encodeURIComponent(token)}`
+      );
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -218,12 +234,22 @@ function OrderPage() {
               </p>
             )}
 
-            {!order.canDownload && !order.needsAttention && (
-              <p className="text-muted-foreground mt-4 text-xs">
-                We are still working on your video. This page refreshes
-                automatically.
+            {order.sandbox && order.status === 'paid' && (
+              <p className="mt-4 text-xs text-emerald-400">
+                Stripe sandbox payment confirmed. No real charge or video
+                generation.
               </p>
             )}
+
+            {!order.canDownload &&
+              !order.needsAttention &&
+              !['canceled', 'expired', 'refunded'].includes(order.status) &&
+              !(order.sandbox && order.status === 'paid') && (
+                <p className="text-muted-foreground mt-4 text-xs">
+                  We are still working on your video. This page refreshes
+                  automatically.
+                </p>
+              )}
 
             <button
               onClick={copyLink}

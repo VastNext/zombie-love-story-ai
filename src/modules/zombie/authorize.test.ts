@@ -2,10 +2,61 @@ import { describe, expect, it } from 'vitest';
 
 import {
   authorizeAdminTest,
+  canCheckoutZombieOrder,
+  canCreateZombieOrder,
   parseMode,
   parsePaused,
   parsePositiveInt,
 } from './authorize';
+
+describe('Stripe 沙盒授权', () => {
+  it('拒绝访客建单，并仅允许管理员支付本人沙盒订单', () => {
+    expect(canCreateZombieOrder('stripe_sandbox', false)).toBe(false);
+    expect(canCreateZombieOrder('stripe_sandbox', true)).toBe(true);
+    expect(
+      canCheckoutZombieOrder(
+        'stripe_sandbox',
+        true,
+        'stripe_sandbox',
+        'admin-1',
+        'admin-1'
+      )
+    ).toBe(true);
+    expect(
+      canCheckoutZombieOrder(
+        'stripe_sandbox',
+        false,
+        'stripe_sandbox',
+        'admin-1',
+        'admin-1'
+      )
+    ).toBe(false);
+    expect(
+      canCheckoutZombieOrder(
+        'stripe_sandbox',
+        true,
+        'stripe_sandbox',
+        'admin-1',
+        'admin-2'
+      )
+    ).toBe(false);
+    expect(
+      canCheckoutZombieOrder(
+        'stripe_sandbox',
+        true,
+        'stripe',
+        'admin-1',
+        'admin-1'
+      )
+    ).toBe(false);
+    expect(
+      canCheckoutZombieOrder('live', false, 'stripe_sandbox', null, null)
+    ).toBe(false);
+    expect(canCheckoutZombieOrder('live', false, 'stripe', null, null)).toBe(
+      true
+    );
+  });
+});
 
 const base = {
   isAdmin: true,
@@ -20,9 +71,10 @@ const base = {
 };
 
 describe('parseMode / parsePaused / parsePositiveInt', () => {
-  it('defaults to admin_test for anything other than live', () => {
+  it('recognizes only supported modes', () => {
     expect(parseMode(undefined)).toBe('admin_test');
     expect(parseMode('live')).toBe('live');
+    expect(parseMode('stripe_sandbox')).toBe('stripe_sandbox');
     expect(parseMode('LIVE')).toBe('admin_test');
   });
 

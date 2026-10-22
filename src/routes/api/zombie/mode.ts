@@ -30,6 +30,7 @@ async function GET({ request }: { request: Request }) {
       generationPaused: paused,
       // 只有 V1 模式 + 管理员 + 未暂停时才允许看到测试入口
       canTest: mode === 'admin_test' && isAdmin && !paused,
+      canCheckout: mode === 'live' || (mode === 'stripe_sandbox' && isAdmin),
       priceCents: ZOMBIE_PRICE_CENTS,
       currency: ZOMBIE_CURRENCY,
     },

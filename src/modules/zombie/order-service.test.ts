@@ -76,6 +76,35 @@ describe('order service (integration, in-memory libsql)', () => {
     return createOrderService({ db, clock });
   }
 
+  it('重复关联同一结账会话幂等，付款后不能退回待付款', async () => {
+    const service = svc();
+    const { order } = await service.createDraft({
+      aspectRatio: '9:16',
+      source: 'stripe',
+      priceCents: 499,
+    });
+    expect(await service.markCheckoutPending(order.id, 'cs_same')).toBeTruthy();
+    expect(await service.markCheckoutPending(order.id, 'cs_same')).toBeTruthy();
+    expect(await service.markCheckoutPending(order.id, 'cs_other')).toBeNull();
+    await service.markPaidBySession('cs_same');
+    await service.markCheckoutPending(order.id, 'cs_same');
+    expect((await service.getOrderById(order.id)).status).toBe('paid');
+  });
+
+  it('清理不能认领已经进入支付流程的草稿', async () => {
+    const service = svc();
+    const { order } = await service.createDraft({
+      aspectRatio: '9:16',
+      source: 'stripe',
+      priceCents: 499,
+    });
+    await service.markCheckoutPending(order.id, 'cs_keep');
+    expect(await service.expireDraft(order.id)).toBeNull();
+    expect((await service.getOrderById(order.id)).status).toBe(
+      'checkout_pending'
+    );
+  });
+
   it('creates a draft order with a unique order number and access token', async () => {
     const service = svc();
     const { order, accessToken } = await service.createDraft({

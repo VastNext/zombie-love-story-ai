@@ -95,6 +95,83 @@ export class R2Provider implements StorageProvider {
     }
   };
 
+  getObjectInfo = async ({ key }: { key: string }) => {
+    const { AwsClient } = await import('aws4fetch');
+    const client = new AwsClient({
+      accessKeyId: this.configs.accessKeyId,
+      secretAccessKey: this.configs.secretAccessKey,
+      region: this.configs.region || 'auto',
+      service: 's3',
+    });
+    const response = await client.fetch(
+      new Request(
+        `${this.getEndpoint()}/${this.configs.bucket}/${this.getUploadPath()}/${key}`,
+        { method: 'HEAD' }
+      )
+    );
+    if (response.status === 404) return null;
+    if (!response.ok)
+      throw new Error(`无法验证已上传的照片：${response.status}`);
+    return {
+      size: Number(response.headers.get('content-length')),
+      type: response.headers.get('content-type') || '',
+    };
+  };
+
+  getObjectHeader = async (key: string): Promise<Uint8Array> => {
+    const { AwsClient } = await import('aws4fetch');
+    const client = new AwsClient({
+      accessKeyId: this.configs.accessKeyId,
+      secretAccessKey: this.configs.secretAccessKey,
+      region: this.configs.region || 'auto',
+      service: 's3',
+    });
+    const response = await client.fetch(
+      new Request(
+        `${this.getEndpoint()}/${this.configs.bucket}/${this.getUploadPath()}/${key}`,
+        { headers: { Range: 'bytes=0-11' } }
+      )
+    );
+    if (response.status !== 206) throw new Error('R2 文件头读取失败');
+    return new Uint8Array(await response.arrayBuffer());
+  };
+
+  getPresignedPutUrl = async ({
+    key,
+    type,
+    size,
+    expiresIn,
+  }: {
+    key: string;
+    type: string;
+    size: number;
+    expiresIn: number;
+  }) => {
+    const url = new URL(
+      `${this.getEndpoint()}/${this.configs.bucket}/${this.getUploadPath()}/${key}`
+    );
+    url.searchParams.set('X-Amz-Expires', String(expiresIn));
+    const { AwsClient } = await import('aws4fetch');
+    const client = new AwsClient({
+      accessKeyId: this.configs.accessKeyId,
+      secretAccessKey: this.configs.secretAccessKey,
+      region: this.configs.region || 'auto',
+      service: 's3',
+    });
+    const signed = await client.sign(
+      new Request(url.toString(), {
+        method: 'PUT',
+        headers: {
+          'Content-Type': type,
+          'Content-Length': String(size),
+          'If-None-Match': '*',
+        },
+      }),
+      { aws: { signQuery: true, allHeaders: true } }
+    );
+    return signed.url;
+  };
+
   /**
    * 私有对象的短时效签名 GET URL（S3 预签名）。
    * 付费成片/原始肖像走这里，避免公开可猜链接。
@@ -151,7 +228,7 @@ export class R2Provider implements StorageProvider {
       const response = await client.fetch(
         new Request(url, { method: 'DELETE' })
       );
-      return response.ok;
+      return response.ok || response.status === 404;
     } catch {
       return false;
     }

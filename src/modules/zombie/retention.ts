@@ -51,6 +51,19 @@ export function photoRetentionDecision(
     return { action: 'keep', reason: 'draft_within_ttl' };
   }
 
+  if (['canceled', 'expired', 'refunded'].includes(order.status)) {
+    const createdAt = toDate(order.createdAt);
+    const ttl = DRAFT_TTL_MS;
+    if (createdAt && now.getTime() - createdAt.getTime() >= ttl) {
+      return {
+        action: 'delete',
+        reason: 'unpaid_or_canceled_24h',
+        manualFollowUp: false,
+      };
+    }
+    return { action: 'keep', reason: 'checkout_within_ttl' };
+  }
+
   if (order.status === 'succeeded') {
     const completedAt = toDate(order.completedAt);
     if (
@@ -106,20 +119,18 @@ export function createRetention(deps: RetentionDeps) {
   const clock = deps.clock ?? systemClock;
 
   async function deletePhotos(order: any): Promise<void> {
-    if (!deps.storage) return;
+    if (!deps.storage) throw new Error('未配置原图存储，无法删除');
     for (const key of [order.photo1Key, order.photo2Key]) {
       if (key) {
-        try {
-          await deps.storage.deleteObject(key);
-        } catch (error) {
-          console.error('[zombie-retention] delete failed', key, error);
-        }
+        const deleted = await deps.storage.deleteObject(key);
+        if (!deleted) throw new Error('R2 照片删除失败');
       }
     }
   }
 
   /** 跑一轮清理；返回处理的订单数。 */
   async function tick(limit = 20): Promise<number> {
+    if (!deps.storage) return 0;
     const rows = await database()
       .select()
       .from(zombieOrder)
@@ -139,7 +150,17 @@ export function createRetention(deps: RetentionDeps) {
       const decision = photoRetentionDecision(order, now);
       if (decision.action === 'keep') continue;
 
-      await deletePhotos(order);
+      try {
+        if (
+          decision.action === 'expire_draft' &&
+          !(await deps.orderService.expireDraft(order.id))
+        )
+          continue;
+        await deletePhotos(order);
+      } catch (error) {
+        console.error('[zombie-retention] delete failed', order.id, error);
+        continue;
+      }
 
       if (decision.action === 'expire_draft') {
         await deps.orderService.updateStatus(

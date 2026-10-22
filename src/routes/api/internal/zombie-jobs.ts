@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 
 import { envConfigs } from '@/config';
+import { isCronAuthorized } from '@/modules/zombie/cron';
 import { getZombieRuntime } from '@/modules/zombie/runtime';
 import { respData } from '@/lib/resp';
 
@@ -12,16 +13,10 @@ function fail(message: string, status: number) {
 /**
  * 定时任务入口：推进生成、发送通知、清理过期肖像。
  *
- * 供 Vercel Cron 或外部调度调用。校验方式二选一：
- * - Vercel Cron 自带的 `x-vercel-cron` 头
- * - `Authorization: Bearer <ZOMBIE_CRON_SECRET>`
+ * 供 Vercel Cron 或外部调度调用，必须携带 Bearer 密钥。
  */
 function isAuthorized(request: Request): boolean {
-  if (request.headers.get('x-vercel-cron')) return true;
-  const secret = envConfigs.zombie_cron_secret;
-  if (!secret) return false;
-  const header = request.headers.get('authorization') ?? '';
-  return header === `Bearer ${secret}`;
+  return isCronAuthorized(request, envConfigs.zombie_cron_secret);
 }
 
 async function GET({ request }: { request: Request }) {

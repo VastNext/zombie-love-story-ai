@@ -35,9 +35,18 @@ async function POST({ request }: { request: Request }) {
       event.type === 'checkout.session.async_payment_succeeded'
     ) {
       const session = event.data.object as any;
-      const paid =
-        session.payment_status === 'paid' ||
-        session.payment_status === 'no_payment_required';
+      const matched = await svc.getByStripeSession(session.id);
+      if (!matched && session.metadata?.zombieOrderId) {
+        // Checkout 建立与写入 Session ID 之间可能收到 webhook；让 Stripe 稍后重试。
+        return fail('订单尚未关联支付会话', 500);
+      }
+      if (
+        matched &&
+        (matched.source === 'stripe_sandbox') !== (session.livemode === false)
+      ) {
+        return fail('支付会话与订单环境不匹配', 400);
+      }
+      const paid = session.payment_status === 'paid';
 
       if (!paid) {
         // 延迟支付方式：等 async_payment_succeeded
@@ -50,8 +59,12 @@ async function POST({ request }: { request: Request }) {
             ? session.payment_intent
             : null,
         email:
-          session.customer_details?.email ?? session.customer_email ?? null,
-        paidAt: session.created ? new Date(session.created * 1000) : null,
+          matched?.source === 'stripe_sandbox'
+            ? null
+            : (session.customer_details?.email ??
+              session.customer_email ??
+              null),
+        paidAt: null,
       });
 
       if (!order) {

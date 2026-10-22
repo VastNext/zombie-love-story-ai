@@ -246,7 +246,7 @@ def main() -> int:
         return 2
 
     if args.worktree:
-        files = git("diff", "HEAD", "--name-only").splitlines()
+        files = git("diff", "HEAD", "--name-only", "--diff-filter=ACMRTUXB").splitlines()
         files += git("ls-files", "--others", "--exclude-standard").splitlines()
         diff_text = git("diff", "HEAD", "--unified=0", "--no-color")
         # include untracked file contents as fully-added diffs
@@ -259,7 +259,7 @@ def main() -> int:
             diff_text += f"\n+++ b/{f}\n@@ -0,0 +1 @@\n"
             diff_text += "\n".join("+" + l for l in lines)
     else:
-        files = git("diff", "--cached", "--name-only").splitlines()
+        files = git("diff", "--cached", "--name-only", "--diff-filter=ACMRTUXB").splitlines()
         diff_text = git("diff", "--cached", "--unified=0", "--no-color")
 
     files = sorted(set(f for f in files if f))

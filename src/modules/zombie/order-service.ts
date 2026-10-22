@@ -166,7 +166,9 @@ export function createOrderService(deps: ZombieOrderDeps = {}) {
     const rows = await database()
       .update(zombieOrder)
       .set({ ...patch, status: to, updatedAt: clock() })
-      .where(eq(zombieOrder.id, orderId))
+      .where(
+        and(eq(zombieOrder.id, orderId), eq(zombieOrder.status, current.status))
+      )
       .returning();
     return rows[0] ?? null;
   }
@@ -175,7 +177,27 @@ export function createOrderService(deps: ZombieOrderDeps = {}) {
     orderId: string,
     stripeSessionId: string
   ): Promise<any | null> {
-    return updateStatus(orderId, 'checkout_pending', { stripeSessionId });
+    const rows = await database()
+      .update(zombieOrder)
+      .set({ status: 'checkout_pending', stripeSessionId, updatedAt: clock() })
+      .where(and(eq(zombieOrder.id, orderId), eq(zombieOrder.status, 'draft')))
+      .returning();
+    if (rows[0]) return rows[0];
+    const current = await getOrderById(orderId);
+    return current?.stripeSessionId === stripeSessionId ? current : null;
+  }
+
+  async function expireDraft(orderId: string): Promise<any | null> {
+    const rows = await database()
+      .update(zombieOrder)
+      .set({
+        status: 'expired',
+        errorCode: 'draft_expired',
+        updatedAt: clock(),
+      })
+      .where(and(eq(zombieOrder.id, orderId), eq(zombieOrder.status, 'draft')))
+      .returning();
+    return rows[0] ?? null;
   }
 
   /**
@@ -205,9 +227,17 @@ export function createOrderService(deps: ZombieOrderDeps = {}) {
         paidAt: info.paidAt ?? clock(),
         updatedAt: clock(),
       })
-      .where(eq(zombieOrder.id, existing.id))
+      .where(
+        and(
+          eq(zombieOrder.id, existing.id),
+          inArray(zombieOrder.status, ['draft', 'checkout_pending'])
+        )
+      )
       .returning();
-    return { order: rows[0] ?? existing, alreadyPaid: false };
+    return {
+      order: rows[0] ?? (await getOrderById(existing.id)),
+      alreadyPaid: !rows[0],
+    };
   }
 
   /**
@@ -297,6 +327,7 @@ export function createOrderService(deps: ZombieOrderDeps = {}) {
     attachPhotos,
     updateStatus,
     markCheckoutPending,
+    expireDraft,
     markPaidBySession,
     authorizeGeneration,
     markSucceeded,

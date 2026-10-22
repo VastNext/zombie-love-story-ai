@@ -53,6 +53,7 @@ export function Hero() {
   const [modeInfo, setModeInfo] = useState<{
     mode: string;
     canTest: boolean;
+    canCheckout: boolean;
     generationPaused: boolean;
     priceCents: number;
   } | null>(null);
@@ -107,7 +108,7 @@ export function Hero() {
       ].slice(0, 20);
       localStorage.setItem('zombie_orders', JSON.stringify(next));
     } catch {
-      // localStorage 不可用时忽略（用户仍可用复制出的私有链接）
+      throw new Error('无法保存私有订单入口，请允许浏览器本地存储后再支付。');
     }
   };
 
@@ -123,9 +124,19 @@ export function Hero() {
       toast.error('Please upload both Photo 1 and Photo 2 to proceed.');
       return;
     }
+    if (!modeInfo?.canTest && !modeInfo?.canCheckout) {
+      toast.info('Generation is not open yet.');
+      return;
+    }
+    if (modeInfo.canTest && !testCode.trim()) {
+      toast.error('Enter the test code to start a test generation.');
+      return;
+    }
 
     try {
       setIsRedirectingToStripe(true);
+      const direct =
+        modeInfo?.mode === 'stripe_sandbox' || modeInfo?.mode === 'live';
       const form = new FormData();
       form.append('aspectRatio', aspectRatio);
       if (email.trim()) form.append('email', email.trim());
@@ -134,9 +145,26 @@ export function Hero() {
 
       const res = await fetch('/api/zombie/orders', {
         method: 'POST',
-        body: form,
+        ...(direct
+          ? {
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                aspectRatio,
+                email: modeInfo?.mode === 'live' ? email.trim() : undefined,
+                photos: [photo1File, photo2File].map(
+                  ({ name, type, size }) => ({ name, type, size })
+                ),
+              }),
+            }
+          : { body: form }),
       });
-      const json = await res.json();
+      const json = await res.json().catch(() => {
+        throw new Error(
+          res.status === 413
+            ? 'Photos exceed the server upload limit.'
+            : 'Server returned an invalid response. Please try again.'
+        );
+      });
       if (json?.code !== 0 || !json?.data) {
         throw new Error(json?.message || 'Could not create order');
       }
@@ -144,12 +172,28 @@ export function Hero() {
       const { orderId, orderNo, accessToken } = json.data;
       rememberOrder({ orderId, orderNo, accessToken });
 
+      if (modeInfo?.mode === 'live') {
+        for (const [index, file] of [photo1File, photo2File].entries()) {
+          const { uploadUrl } = await apiPost<{ uploadUrl: string }>(
+            `/api/zombie/orders/${encodeURIComponent(orderId)}/upload`,
+            {
+              accessToken,
+              slot: index + 1,
+              photo: { name: file.name, type: file.type, size: file.size },
+            }
+          );
+          const result = await fetch(uploadUrl, {
+            method: 'PUT',
+            headers: { 'Content-Type': file.type, 'If-None-Match': '*' },
+            body: file,
+          });
+          if (!result.ok)
+            throw new Error('Photo upload failed. Please try again.');
+        }
+      }
+
       // V1：管理员测试 —— 输入 Code 后跳过 Stripe 直接生成
       if (modeInfo?.canTest) {
-        if (!testCode.trim()) {
-          toast.error('Enter the test code to start a test generation.');
-          return;
-        }
         await apiPost('/api/zombie/admin-test', {
           orderId,
           code: testCode.trim(),
@@ -159,7 +203,7 @@ export function Hero() {
       }
 
       // V2：正式收款
-      if (modeInfo?.mode === 'live') {
+      if (modeInfo?.canCheckout) {
         const result = await apiPost<{ checkoutUrl?: string }>(
           '/api/zombie/checkout',
           { orderId, accessToken }
@@ -481,10 +525,15 @@ export function Hero() {
                 }
                 setIsModalOpen(true);
               }}
+              disabled={!modeInfo?.canTest && !modeInfo?.canCheckout}
               className="group flex w-full min-w-[320px] cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-rose-600 via-rose-500 to-amber-600 px-8 py-3.5 text-center text-xs font-semibold text-white shadow-lg shadow-rose-950/40 transition-all hover:from-rose-500 hover:to-amber-500 sm:w-auto sm:text-sm"
             >
               <Sparkles className="h-4 w-4 text-white" />
-              <span>Generate Video · $4.99</span>
+              <span>
+                {modeInfo?.mode === 'stripe_sandbox' && modeInfo.canCheckout
+                  ? 'Test payment · $4.99 (sandbox)'
+                  : 'Generate Video · $4.99'}
+              </span>
               <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </button>
             <div className="text-muted-foreground mt-3 flex items-center gap-4 text-[11px]">
@@ -760,10 +809,19 @@ export function Hero() {
             </ul>
 
             <button
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => {
+                if (modeInfo?.canTest || modeInfo?.canCheckout) {
+                  document
+                    .getElementById('generator')
+                    ?.scrollIntoView({ behavior: 'smooth' });
+                }
+              }}
+              disabled={!modeInfo?.canTest && !modeInfo?.canCheckout}
               className="mt-8 w-full cursor-pointer rounded-lg bg-gradient-to-r from-rose-600 to-amber-600 py-2.5 text-xs font-semibold text-white shadow-md shadow-rose-950 transition-all hover:from-rose-500 hover:to-amber-500"
             >
-              Generate my video · $4.99
+              {modeInfo?.mode === 'stripe_sandbox' && modeInfo.canCheckout
+                ? 'Test payment (sandbox)'
+                : 'Generate my video · $4.99'}
             </button>
             <p className="text-muted-foreground mt-3 text-center text-[10px]">
               No account required. Email optional for delivery.
@@ -877,6 +935,12 @@ export function Hero() {
                       <strong>Test generation:</strong> no charge. Enter the
                       test code to run a real generation on your account.
                     </>
+                  ) : modeInfo?.mode === 'stripe_sandbox' &&
+                    modeInfo.canCheckout ? (
+                    <>
+                      <strong>Stripe sandbox:</strong> test payment only. No
+                      real charge or video generation.
+                    </>
                   ) : modeInfo?.mode === 'live' ? (
                     <>
                       <strong>One-time payment.</strong> You will be redirected
@@ -892,23 +956,25 @@ export function Hero() {
               </div>
 
               <div className="mt-5 space-y-4">
-                <div>
-                  <label className="text-muted-foreground mb-1 block text-[11px]">
-                    Email (optional)
-                  </label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    className="bg-background border-border text-foreground w-full rounded-lg border px-3 py-2 text-xs outline-none focus:border-rose-500"
-                  />
-                  <p className="text-muted-foreground mt-1 text-[10px] leading-relaxed">
-                    Add an email to receive your private video link. Leave it
-                    blank and save the private link shown after checkout — this
-                    browser can reopen the order from My orders.
-                  </p>
-                </div>
+                {modeInfo?.mode !== 'stripe_sandbox' && (
+                  <div>
+                    <label className="text-muted-foreground mb-1 block text-[11px]">
+                      Email (optional)
+                    </label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      className="bg-background border-border text-foreground w-full rounded-lg border px-3 py-2 text-xs outline-none focus:border-rose-500"
+                    />
+                    <p className="text-muted-foreground mt-1 text-[10px] leading-relaxed">
+                      Add an email to receive your private video link. Leave it
+                      blank and save the private link shown after checkout —
+                      this browser can reopen the order from My orders.
+                    </p>
+                  </div>
+                )}
 
                 {modeInfo?.canTest && (
                   <div>
@@ -939,6 +1005,12 @@ export function Hero() {
                     <>
                       <Sparkles className="h-3.5 w-3.5" />
                       <span>Start test generation</span>
+                    </>
+                  ) : modeInfo?.mode === 'stripe_sandbox' &&
+                    modeInfo.canCheckout ? (
+                    <>
+                      <LockIcon className="h-3.5 w-3.5" />
+                      <span>Test payment with Stripe</span>
                     </>
                   ) : (
                     <>

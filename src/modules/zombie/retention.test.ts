@@ -1,6 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { DRAFT_TTL_MS, photoRetentionDecision } from './retention';
+import {
+  createRetention,
+  DRAFT_TTL_MS,
+  photoRetentionDecision,
+} from './retention';
 import {
   PHOTO_RETENTION_AFTER_SUCCESS_MS,
   PHOTO_RETENTION_FAILED_MS,
@@ -88,6 +92,35 @@ describe('photoRetentionDecision', () => {
     });
   });
 
+  it('清理长期未完成结账与已取消订单的原图', () => {
+    for (const status of ['canceled', 'expired', 'refunded']) {
+      expect(
+        photoRetentionDecision(
+          order({ status, createdAt: new Date(now.getTime() - DRAFT_TTL_MS) }),
+          now
+        ).action
+      ).toBe('delete');
+    }
+    expect(
+      photoRetentionDecision(
+        order({
+          status: 'checkout_pending',
+          createdAt: new Date(now.getTime() - DRAFT_TTL_MS),
+        }),
+        now
+      ).action
+    ).toBe('keep');
+    expect(
+      photoRetentionDecision(
+        order({
+          status: 'checkout_pending',
+          createdAt: new Date(now.getTime() - 2 * DRAFT_TTL_MS),
+        }),
+        now
+      ).action
+    ).toBe('keep');
+  });
+
   it('keeps drafts within the TTL', () => {
     const draft = order({
       status: 'draft',
@@ -113,5 +146,51 @@ describe('photoRetentionDecision', () => {
 
   it('handles a missing order', () => {
     expect(photoRetentionDecision(null, now)).toMatchObject({ action: 'keep' });
+  });
+});
+
+describe('清理失败后的重试', () => {
+  it('没有存储时不得标记照片已删除', async () => {
+    const updateStatus = vi.fn();
+    const row = order({
+      id: 'zo_no_storage',
+      status: 'canceled',
+      createdAt: new Date(0),
+    });
+    const retention = createRetention({
+      db: {
+        select: () => ({
+          from: () => ({ where: () => ({ limit: async () => [row] }) }),
+        }),
+      },
+      clock: () => now,
+      orderService: { updateStatus } as any,
+      storage: null,
+    });
+    expect(await retention.tick()).toBe(0);
+    expect(updateStatus).not.toHaveBeenCalled();
+  });
+  it('R2 删除失败时不写入 photosDeletedAt', async () => {
+    const row = order({
+      id: 'zo_failed_delete',
+      status: 'canceled',
+      createdAt: new Date(now.getTime() - DRAFT_TTL_MS),
+    });
+    const updateStatus = vi.fn();
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const db = {
+      select: () => ({
+        from: () => ({ where: () => ({ limit: async () => [row] }) }),
+      }),
+    };
+    const retention = createRetention({
+      db,
+      clock: () => now,
+      orderService: { updateStatus } as any,
+      storage: { deleteObject: async () => false } as any,
+    });
+    expect(await retention.tick(1)).toBe(0);
+    expect(updateStatus).not.toHaveBeenCalled();
+    logged.mockRestore();
   });
 });

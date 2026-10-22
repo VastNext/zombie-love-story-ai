@@ -56,6 +56,11 @@ export interface StorageProvider {
   // check if object exists (optional)
   exists?: (options: { key: string; bucket?: string }) => Promise<boolean>;
 
+  getObjectInfo?: (options: {
+    key: string;
+  }) => Promise<{ size: number; type: string } | null>;
+  getObjectHeader?: (key: string) => Promise<Uint8Array>;
+
   // get public url for key (optional)
   getPublicUrl?: (options: { key: string; bucket?: string }) => string;
 
@@ -64,6 +69,13 @@ export interface StorageProvider {
     key: string;
     bucket?: string;
     expiresIn?: number;
+  }) => Promise<string>;
+
+  getPresignedPutUrl?: (options: {
+    key: string;
+    type: string;
+    size: number;
+    expiresIn: number;
   }) => Promise<string>;
 
   // delete an object (optional)
@@ -145,6 +157,18 @@ export class StorageManager {
     return provider.exists(options);
   }
 
+  async getObjectInfo(
+    key: string
+  ): Promise<{ size: number; type: string } | null> {
+    return this.ensureDefaultProvider().getObjectInfo?.({ key }) ?? null;
+  }
+
+  async getObjectHeader(key: string): Promise<Uint8Array> {
+    const getHeader = this.ensureDefaultProvider().getObjectHeader;
+    if (!getHeader) throw new Error('R2 不支持读取文件头');
+    return getHeader(key);
+  }
+
   // get public url using default provider (if supported)
   getPublicUrl(options: { key: string; bucket?: string }): string | undefined {
     const provider = this.ensureDefaultProvider();
@@ -161,6 +185,19 @@ export class StorageManager {
     const provider = this.ensureDefaultProvider();
     if (!provider.getPresignedGetUrl) return undefined;
     return provider.getPresignedGetUrl(options);
+  }
+
+  async getPresignedPutUrl(
+    key: string,
+    type: string,
+    size: number
+  ): Promise<string | undefined> {
+    return this.ensureDefaultProvider().getPresignedPutUrl?.({
+      key,
+      type,
+      size,
+      expiresIn: 300,
+    });
   }
 
   // delete an object using default provider (if supported)

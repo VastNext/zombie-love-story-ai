@@ -5,7 +5,7 @@
  */
 
 /** 订单来源。`admin_test` 永远是零金额，绝不进入 `paid`。 */
-export type ZombieSource = 'admin_test' | 'stripe';
+export type ZombieSource = 'admin_test' | 'stripe' | 'stripe_sandbox';
 
 /** 交付画幅。一笔订单只交付所选画幅的一条视频。 */
 export type ZombieAspectRatio = '9:16' | '16:9';
