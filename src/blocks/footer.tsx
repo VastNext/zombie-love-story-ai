@@ -4,7 +4,7 @@ import { Link } from '@/core/i18n/navigation';
 
 export function Footer() {
   return (
-    <footer className="border-border border-t bg-[#010103] px-6 py-12">
+    <footer className="border-border bg-background border-t px-6 py-7">
       <div className="text-muted-foreground mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 text-xs md:flex-row">
         <div className="flex items-center gap-2">
           <div className="flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br from-rose-600 via-rose-500 to-amber-500">
@@ -24,22 +24,22 @@ export function Footer() {
             Generator
           </a>
           <a
-            href="/#storyboard"
+            href="/#sample"
             className="hover:text-foreground transition-colors"
           >
-            Match-Cut Anatomy
+            Sample
           </a>
           <a
             href="/#prompts"
             className="hover:text-foreground transition-colors"
           >
-            Prompt Catalog
+            Storyboard
           </a>
           <a
-            href="/#longtail"
+            href="/zombie/order"
             className="hover:text-foreground transition-colors"
           >
-            Trend Variations
+            My orders
           </a>
           <a
             href="/#pricing"

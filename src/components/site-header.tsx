@@ -4,8 +4,7 @@ import { useState } from 'react';
 import { Menu, Skull, X, Zap } from 'lucide-react';
 
 import { useSession } from '@/core/auth/client';
-import { Link, usePathname } from '@/core/i18n/navigation';
-import { envConfigs } from '@/config';
+import { Link } from '@/core/i18n/navigation';
 import { LocaleSelector } from '@/components/locale-selector';
 import { SiteUserMenu } from '@/components/site-user-menu';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -17,10 +16,8 @@ export function SiteHeader() {
 
   const navItems = [
     { label: 'Generator', href: '/#generator' },
-    { label: 'Match-Cut Anatomy', href: '/#storyboard' },
-    { label: 'Prompt Catalog', href: '/#prompts' },
-    { label: 'Trend Variations', href: '/#longtail' },
-    { label: 'Pricing', href: '/#pricing' },
+    { label: 'Watch sample', href: '/#sample' },
+    { label: 'How it works', href: '/#how-it-works' },
     { label: 'FAQ', href: '/#faq' },
   ];
 
@@ -38,7 +35,7 @@ export function SiteHeader() {
               <span className="font-mono text-xs text-slate-500">.ai</span>
             </span>
             <span className="hidden rounded border border-slate-800 bg-slate-900 px-1.5 py-0.5 font-mono text-[10px] tracking-wider text-slate-400 uppercase sm:inline-block">
-              Trend v2
+              Film studio
             </span>
           </div>
         </Link>
@@ -84,17 +81,19 @@ export function SiteHeader() {
           )}
 
           <a
-            href="/#pricing"
+            href="/zombie/order"
             className="flex items-center gap-1.5 rounded-lg bg-rose-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition-all hover:bg-rose-500"
           >
             <Zap className="h-3.5 w-3.5" />
-            <span>Pre-order · $6.99</span>
+            <span>My orders</span>
           </a>
         </div>
 
         {/* Mobile menu trigger */}
         <button
           type="button"
+          aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'}
+          aria-expanded={mobileOpen}
           onClick={() => setMobileOpen(!mobileOpen)}
           className="flex p-2 text-slate-400 hover:text-white lg:hidden"
         >
@@ -144,12 +143,12 @@ export function SiteHeader() {
                 </div>
               )}
               <a
-                href="/#pricing"
+                href="/zombie/order"
                 onClick={() => setMobileOpen(false)}
                 className="flex items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white"
               >
                 <Zap className="h-3 w-3" />
-                <span>Pre-order · $6.99</span>
+                <span>My orders</span>
               </a>
             </div>
           </nav>
