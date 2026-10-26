@@ -6,6 +6,8 @@ import { formatZombiePrice } from '@/modules/zombie/types';
 import { ZOMBIE_STORY_PROMPT } from '@/modules/zombie/video-spec';
 import { apiPost } from '@/lib/api-client';
 
+import { getDeviceAspectRatio } from './device-aspect-ratio';
+
 import './hero.css';
 
 export function Hero() {
@@ -13,7 +15,10 @@ export function Hero() {
   const [photo2, setPhoto2] = useState<string | null>(null);
   const [photo1Name, setPhoto1Name] = useState('');
   const [photo2Name, setPhoto2Name] = useState('');
-  const [aspectRatio, setAspectRatio] = useState<'9:16' | '16:9'>('9:16');
+  const [selectedAspectRatio, setAspectRatio] = useState<
+    '9:16' | '16:9' | null
+  >(null);
+  const aspectRatio = selectedAspectRatio ?? '16:9';
   const [copied, setCopied] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isRedirectingToStripe, setIsRedirectingToStripe] = useState(false);
@@ -32,6 +37,11 @@ export function Hero() {
     priceCents: number;
   } | null>(null);
   const price = formatZombiePrice(modeInfo?.priceCents);
+
+  React.useEffect(() => {
+    // SSR 与首次客户端渲染保持一致，仅挂载时初始化，不覆盖手动选择。
+    setAspectRatio((current) => current ?? getDeviceAspectRatio(navigator));
+  }, []);
 
   React.useEffect(() => {
     fetch('/api/zombie/mode')
@@ -301,6 +311,7 @@ export function Hero() {
               <button
                 key={ratio}
                 type="button"
+                disabled={selectedAspectRatio === null}
                 aria-pressed={aspectRatio === ratio}
                 onClick={() => setAspectRatio(ratio)}
               >

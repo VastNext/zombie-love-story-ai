@@ -33,8 +33,8 @@ it('仅提供双人角色，保留两种画幅和私有订单入口', () => {
   expect(html.match(/type="file"/g) || []).toHaveLength(2);
   expect(html).toContain('Photo 1: survivor');
   expect(html).toContain('Photo 2: infected partner');
-  expect(html).toContain('aria-pressed="true">9:16');
-  expect(html).toContain('aria-pressed="false">16:9');
+  expect(html).toContain('disabled="" aria-pressed="false">9:16');
+  expect(html).toContain('disabled="" aria-pressed="true">16:9');
   expect(html).toContain('href="/zombie/order"');
   expect(html).toContain('Email optional');
   expect(html).not.toContain('Pet / Dog Trend');
